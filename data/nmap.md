@@ -17,6 +17,11 @@ Run the full `vuln` NSE category — broad vulnerability scan.
 
 Run `malware` NSE scripts to look for known indicators of compromise.
 
+## UDP port scan
+`nmap -sU IP`
+
+Scan UDP ports on the target host. UDP scans are usually slower than TCP scans.
+
 ## Source port 53
 `nmap --source-port 53 IP/24`
 
