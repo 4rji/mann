@@ -22,13 +22,12 @@ type Item struct {
 
 const (
 	cReset  = "\x1b[0m"
-	cBold   = "\x1b[1m"
-	cCyan   = "\x1b[36m"
-	cGreen  = "\x1b[32m"
-	cYellow = "\x1b[33m"
-	cMag    = "\x1b[35m"
-	cGray   = "\x1b[90m"
-	cBlue   = "\x1b[34m"
+	cCyan   = "\x1b[38;5;67m"
+	cGreen  = "\x1b[38;5;108m"
+	cYellow = "\x1b[38;5;143m"
+	cMag    = "\x1b[38;5;132m"
+	cGray   = "\x1b[38;5;245m"
+	cBlue   = "\x1b[38;5;74m"
 )
 
 func have(bin string) bool {
@@ -189,7 +188,7 @@ func runFzf(items []Item) (Item, bool) {
 	var in bytes.Buffer
 	for _, it := range items {
 		display := fmt.Sprintf("%s%s%s %s│%s %s%s%s",
-			cBold+cCyan, it.Section, cReset,
+			cCyan, it.Section, cReset,
 			cGray, cReset,
 			cYellow, it.Description, cReset)
 		fmt.Fprintf(&in, "%s\t%s\t%s\t%s\n",
@@ -198,9 +197,9 @@ func runFzf(items []Item) (Item, bool) {
 
 	preview := strings.Join([]string{
 		`printf '`,
-		`\033[1;35mSection\033[0m\n  %s\n\n`,
-		`\033[1;33mDescription\033[0m\n  %s\n\n`,
-		`\033[1;32mCommand\033[0m\n  \033[1;36m%s\033[0m\n`,
+		`\033[38;5;132mSection\033[0m\n  %s\n\n`,
+		`\033[38;5;143mDescription\033[0m\n  %s\n\n`,
+		`\033[38;5;108mCommand\033[0m\n  \033[38;5;67m%s\033[0m\n`,
 		`' {1} {2} {3}`,
 	}, "")
 
@@ -214,7 +213,7 @@ func runFzf(items []Item) (Item, bool) {
 		"--layout=reverse",
 		"--border",
 		"--info=inline",
-		"--color=prompt:#5fafff,pointer:#ff5f87,marker:#5fff87,header:#5fafff,border:#444444",
+		"--color=fg:#b8bec8,fg+:#d0d6de,bg:-1,bg+:#262a30,hl:#8fb0d0,hl+:#a9bed6,prompt:#8fb0d0,pointer:#d0879a,marker:#8fbf9f,header:#9aa6b2,border:#555b63,spinner:#8fb0d0,info:#9aa6b2",
 		"--preview", preview,
 		"--preview-window=right:55%:wrap:border-left",
 		"--header=ENTER select • ESC quit • TAB toggle preview",
@@ -249,7 +248,7 @@ func fallbackList(items []Item) {
 	fmt.Println()
 	for _, it := range items {
 		fmt.Printf("%s%s%s | %s%s%s\n  %s%s%s\n",
-			cBold+cCyan, it.Section, cReset,
+			cCyan, it.Section, cReset,
 			cYellow, it.Description, cReset,
 			cGreen, it.Command, cReset)
 	}
@@ -277,20 +276,20 @@ func main() {
 	}
 
 	fmt.Printf("\n%sCommand%s\n  %s%s%s\n",
-		cBold+cGreen, cReset, cBold+cCyan, picked.Command, cReset)
+		cGreen, cReset, cCyan, picked.Command, cReset)
 
 	backend, err := copyToClipboard(picked.Command)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "\n%sclipboard%s %s%s%s\n",
-			cBold+cMag, cReset, cYellow, err, cReset)
+			cMag, cReset, cYellow, err, cReset)
 		if hint := clipInstallHint(); hint != "" {
 			fmt.Fprintln(os.Stderr, hint)
 		}
 		return
 	}
 	fmt.Printf("%sCopied%s via %s%s%s  %s(%s)%s\n",
-		cBold+cGreen, cReset,
-		cBold+cBlue, backend, cReset,
+		cGreen, cReset,
+		cBlue, backend, cReset,
 		cGray, runtime.GOOS, cReset,
 	)
 }
