@@ -1,48 +1,86 @@
-# Sed
+# Sed Commands
 
-Stream editor for filtering and transforming text. Process files line by line without loading entire file into memory.
+Stream editor for filtering and transforming text. Process files line by line without loading the entire file into memory.
 
-## Replace text in file
+## Replace first match on each line
 `sed 's/old/new/' file.txt`
 
-Basic substitution. Replace first occurrence on each line. Use `g` flag for all occurrences: `sed 's/old/new/g' file.txt`
+Replace the first occurrence of `old` with `new` on every line.
 
-## Replace and save output
+## Replace every match on each line
+`sed 's/old/new/g' file.txt`
+
+Use the `g` flag to replace all matches on each line, not just the first one.
+
+## Edit a file in place
 `sed -i 's/old/new/g' file.txt`
 
-Modify file in-place. Creates backup with `-i.bak` flag: `sed -i.bak 's/old/new/g' file.txt`
+Modify the file directly instead of printing the changed output to the terminal.
 
-## Delete lines matching pattern
+## Edit in place with backup
+`sed -i.bak 's/old/new/g' file.txt`
+
+Modify the file directly and keep the original content in a `.bak` backup file.
+
+## Delete matching lines
 `sed '/pattern/d' file.txt`
 
-Remove every line containing pattern. Use negation: `sed '/pattern/!d'` keeps only matching lines.
+Remove every line that matches `pattern`.
 
-## Print specific line numbers
-`sed -n '5p' file.txt`
+## Keep only matching lines
+`sed '/pattern/!d' file.txt`
 
-Print line 5. Range: `sed -n '10,20p' file.txt` prints lines 10-20. Use with `-e` for multiple ranges.
+Delete every line that does not match `pattern`, leaving only matching lines.
 
-## Delete specific line
+## Print a line range
+`sed -n '10,20p' file.txt`
+
+Print only lines 10 through 20. The `-n` flag prevents sed from printing every line by default.
+
+## Delete one line
 `sed '5d' file.txt`
 
-Remove line 5. Range: `sed '5,10d' file.txt` deletes lines 5-10.
+Print the file without line 5.
 
-## Insert or append text
-`sed '5i\new line' file.txt`
+## Delete a line range
+`sed '5,10d' file.txt`
 
-Insert before line 5. Use `a\` to append after: `sed '5a\new line' file.txt`
+Print the file without lines 5 through 10.
 
-## Extract lines between patterns
+## Insert text before a line
+`sed '1i\text' file.txt`
+
+Insert `text` before line 1.
+
+## Append text after a line
+`sed '1a\text' file.txt`
+
+Append `text` after line 1.
+
+## Print between two patterns
 `sed -n '/start/,/end/p' file.txt`
 
-Print lines from start to end pattern inclusive. Remove `-n` to print all with matches highlighted.
+Print the section from the first `start` match through the next `end` match.
 
-## Case-insensitive substitution
-`sed 's/old/new/i' file.txt`
+## Replace ignoring case
+`sed 's/old/new/gi' file.txt`
 
-Use `I` flag for case-insensitive. Combine with `g` for global: `sed 's/old/new/gi' file.txt`
+Replace all case variations of `old`, such as `old`, `Old`, or `OLD`.
 
-## Substitute in specific line range
-`sed '10,20s/old/new/g' file.txt`
+## Replace only inside a section
+`sed '/start/,/end/s/old/new/g' file.txt`
 
-Replace old with new only in lines 10-20. Works with patterns too: `sed '/start/,/end/s/old/new/g'`
+Replace text only between the lines that match `start` and `end`.
+
+## Examples
+```
+sed 's/example.com/api.example.com/g' nginx.conf
+sed -i.bak 's/^DEBUG=false/DEBUG=true/' .env
+sed '/^#/d' app.conf
+sed -n '120,150p' server.log
+sed '5d' users.csv
+sed '1i\# Managed by automation' app.conf
+sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' bundle.pem
+sed 's/error/WARNING/gi' app.log
+sed '/server {/,/}/s/listen 80/listen 8080/g' nginx.conf
+```
