@@ -20,6 +20,12 @@ A minimal section file looks like this:
     ## Another command
     `second command`
 
+    ## Examples
+    ```
+    actual command with real IP 192.168.1.1
+    second command with real interface wlan0
+    ```
+
 ## Rules
 
 - The first `# Heading` becomes the **section name** shown in the picker.
@@ -27,6 +33,11 @@ A minimal section file looks like this:
 - Wrap the command in single backticks. Triple-backtick code fences are accepted for multi-line commands.
 - Anything not on the command line is documentation and is ignored by the picker.
 - File name doesn't matter for ordering — the picker sorts by section name then by description.
+
+## Examples convention
+
+- Use placeholders `IP` and `INTERFACE` (uppercase) inside command lines whenever a real IP or interface name would normally appear. This keeps the copyable command generic.
+- Add a single `## Examples` entry per file at the bottom showing the same commands with realistic IP and interface values inside a triple-backtick fence. This serves as quick reference for how to run them in practice.
 
 ## Adding a new section
 

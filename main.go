@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -18,7 +19,10 @@ type Item struct {
 	Section     string
 	Description string
 	Command     string
+	Example     string
 }
+
+var placeholderRe = regexp.MustCompile(`\b(IP|INTERFACE)\b`)
 
 const (
 	cReset  = "\x1b[0m"
@@ -46,6 +50,7 @@ func have(bin string) bool {
 // Anything else is documentation and is ignored.
 func parseFile(content string) []Item {
 	var items []Item
+	var examples []string
 	var section string
 	lines := strings.Split(content, "\n")
 	for i := 0; i < len(lines); i++ {
@@ -53,6 +58,12 @@ func parseFile(content string) []Item {
 		switch {
 		case strings.HasPrefix(t, "## "):
 			desc := strings.TrimSpace(t[3:])
+			if strings.EqualFold(desc, "Examples") {
+				ex, advance := readFence(lines, i+1)
+				examples = append(examples, ex...)
+				i = advance
+				continue
+			}
 			cmd, advance := readCommand(lines, i+1)
 			if cmd != "" && section != "" {
 				items = append(items, Item{Section: section, Description: desc, Command: cmd})
@@ -62,7 +73,64 @@ func parseFile(content string) []Item {
 			section = strings.TrimSpace(t[2:])
 		}
 	}
+	attachExamples(items, examples)
 	return items
+}
+
+// readFence reads a triple-backtick fenced block starting after a heading.
+// Returns the inner lines (trimmed) and the index of the closing fence.
+func readFence(lines []string, start int) ([]string, int) {
+	for j := start; j < len(lines); j++ {
+		nt := strings.TrimSpace(lines[j])
+		if nt == "" {
+			continue
+		}
+		if strings.HasPrefix(nt, "```") {
+			var buf []string
+			k := j + 1
+			for k < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[k]), "```") {
+				if line := strings.TrimSpace(lines[k]); line != "" {
+					buf = append(buf, line)
+				}
+				k++
+			}
+			return buf, k
+		}
+		return nil, j - 1
+	}
+	return nil, len(lines)
+}
+
+// attachExamples matches each example line to the item whose command it
+// realizes. Placeholders `IP` and `INTERFACE` in the command become `\S+`.
+func attachExamples(items []Item, examples []string) {
+	if len(examples) == 0 {
+		return
+	}
+	for idx := range items {
+		re := commandPattern(items[idx].Command)
+		if re == nil {
+			continue
+		}
+		for _, ex := range examples {
+			if re.MatchString(ex) {
+				items[idx].Example = ex
+				break
+			}
+		}
+	}
+}
+
+func commandPattern(cmd string) *regexp.Regexp {
+	const marker = "\x00PH\x00"
+	masked := placeholderRe.ReplaceAllString(cmd, marker)
+	quoted := regexp.QuoteMeta(masked)
+	pattern := "^" + strings.ReplaceAll(quoted, marker, `\S+`) + "$"
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil
+	}
+	return re
 }
 
 // readCommand finds the next command line below a `## ` heading.
@@ -191,8 +259,8 @@ func runFzf(items []Item) (Item, bool) {
 			cCyan, it.Section, cReset,
 			cGray, cReset,
 			cYellow, it.Description, cReset)
-		fmt.Fprintf(&in, "%s\t%s\t%s\t%s\n",
-			it.Section, it.Description, it.Command, display)
+		fmt.Fprintf(&in, "%s\t%s\t%s\t%s\t%s\n",
+			it.Section, it.Description, it.Command, display, it.Example)
 	}
 
 	preview := strings.Join([]string{
@@ -200,7 +268,10 @@ func runFzf(items []Item) (Item, bool) {
 		`\033[38;5;132mSection\033[0m\n  %s\n\n`,
 		`\033[38;5;143mDescription\033[0m\n  %s\n\n`,
 		`\033[38;5;108mCommand\033[0m\n  \033[38;5;67m%s\033[0m\n`,
-		`' {1} {2} {3}`,
+		`' {1} {2} {3}; `,
+		`[ -n {5} ] && printf '`,
+		`\n\033[38;5;143mExample\033[0m\n  \033[38;5;245m%s\033[0m\n`,
+		`' {5}; :`,
 	}, "")
 
 	cmd := exec.Command("fzf",
@@ -235,7 +306,7 @@ func runFzf(items []Item) (Item, bool) {
 	if line == "" {
 		return Item{}, false
 	}
-	parts := strings.SplitN(line, "\t", 4)
+	parts := strings.SplitN(line, "\t", 5)
 	if len(parts) < 3 {
 		fmt.Fprintln(os.Stderr, "unexpected fzf output:", line)
 		os.Exit(1)

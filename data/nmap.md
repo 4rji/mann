@@ -31,3 +31,12 @@ Spoof the source port to 53 (DNS) — sometimes bypasses naive firewall rules.
 `nmap -D RND:10 IP/24`
 
 Send the scan alongside 10 randomly-generated decoy source IPs to obscure the real attacker.
+
+## Examples
+```
+nmap --script vuln 192.168.1.10
+nmap --script malware 192.168.1.10
+nmap -sU 192.168.1.10
+nmap --source-port 53 192.168.1.0/24
+nmap -D RND:10 192.168.1.0/24
+```
