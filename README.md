@@ -19,6 +19,16 @@ Go port of the original `mann.sh`. Uses real `fzf` under the hood (subprocess) t
 
 If `fzf` is missing, `mann` prints the full cheat list to stdout and exits — so it’s still usable as a static reference.
 
+## Install
+
+Install directly from GitHub:
+
+```sh
+go install github.com/4rji/mann@latest
+```
+
+Ensure your Go binary directory (`GOBIN`, or `$(go env GOPATH)/bin` by default) is on `$PATH`, then run `mann`.
+
 ## Build
 
 This repo follows the project convention: each tool is its own Go module. Build from inside `mann/`:
