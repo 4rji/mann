@@ -66,6 +66,29 @@ Pipe-friendly:
 ./mann >> notes.md # append the command to a notes file
 ```
 
+### Updating the catalog (`-u`)
+
+The binary ships with an embedded catalog, but you can pull the latest manuals
+from [`github.com/4rji/mann`](https://github.com/4rji/mann) without rebuilding:
+
+```sh
+mann -u            # download data/*.md into ~/.local/share/mann
+```
+
+No `sudo` needed — the catalog lives in a per-user directory following the
+XDG spec: `$XDG_DATA_HOME/mann`, or `~/.local/share/mann` by default.
+Downloaded files are read at runtime and **override the built-in ones by
+filename**, so new or updated manuals take effect immediately — no rebuild.
+
+Override the location with `MANN_DATA_DIR` (used both to download and to read):
+
+```sh
+MANN_DATA_DIR=/some/dir mann -u    # download here
+MANN_DATA_DIR=/some/dir mann       # and read from here
+```
+
+`mann -h` prints the available flags.
+
 ## Clipboard backends
 
 The binary tries the following in order, picking the first one available on `$PATH`:

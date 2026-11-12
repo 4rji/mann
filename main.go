@@ -3,13 +3,19 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 )
 
 //go:embed data/*.md
@@ -33,6 +39,129 @@ const (
 	cGray   = "\x1b[38;5;245m"
 	cBlue   = "\x1b[38;5;74m"
 )
+
+const (
+	// catalogAPI lists the markdown files under data/ on the default branch.
+	catalogAPI = "https://api.github.com/repos/4rji/mann/contents/data"
+	repoName   = "github.com/4rji/mann"
+)
+
+// dataDir returns the external catalog directory where `mann -u` downloads
+// manuals and where mann reads them at runtime. It is a per-user, no-sudo
+// location: MANN_DATA_DIR if set, else $XDG_DATA_HOME/mann, else
+// ~/.local/share/mann.
+func dataDir() string {
+	if d := strings.TrimSpace(os.Getenv("MANN_DATA_DIR")); d != "" {
+		return d
+	}
+	if d := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); d != "" {
+		return filepath.Join(d, "mann")
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return filepath.Join(home, ".local", "share", "mann")
+	}
+	// Last resort if there is no home directory (rare).
+	return "/tmp/mann"
+}
+
+type ghContent struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	DownloadURL string `json:"download_url"`
+}
+
+func httpGet(url, accept string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	// Generic client name; never leak user/personal details in the UA.
+	req.Header.Set("User-Agent", "mann-cli")
+	if accept != "" {
+		req.Header.Set("Accept", accept)
+	}
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
+	}
+	return body, nil
+}
+
+func writeHint(dir string, err error) error {
+	if errors.Is(err, os.ErrPermission) {
+		return fmt.Errorf("%w\n  No write permission for %s.\n  Pick a writable path:  MANN_DATA_DIR=/some/dir mann -u", err, dir)
+	}
+	return err
+}
+
+// updateCatalog downloads every data/*.md from the repo into dataDir().
+func updateCatalog() error {
+	dir := dataDir()
+
+	fmt.Printf("%s==>%s Updating mann catalog from %s%s%s\n", cBlue, cReset, cCyan, repoName, cReset)
+
+	body, err := httpGet(catalogAPI, "application/vnd.github+json")
+	if err != nil {
+		return fmt.Errorf("list catalog: %w", err)
+	}
+	var contents []ghContent
+	if err := json.Unmarshal(body, &contents); err != nil {
+		return fmt.Errorf("parse catalog listing: %w", err)
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return writeHint(dir, err)
+	}
+
+	count := 0
+	for _, c := range contents {
+		if c.Type != "file" || c.DownloadURL == "" || !strings.HasSuffix(c.Name, ".md") {
+			continue
+		}
+		if strings.EqualFold(c.Name, "README.md") {
+			continue
+		}
+		data, err := httpGet(c.DownloadURL, "")
+		if err != nil {
+			return fmt.Errorf("download %s: %w", c.Name, err)
+		}
+		dest := filepath.Join(dir, c.Name)
+		if err := os.WriteFile(dest, data, 0o644); err != nil {
+			return writeHint(dir, err)
+		}
+		fmt.Printf("  %s✓%s %s\n", cGreen, cReset, c.Name)
+		count++
+	}
+
+	fmt.Printf("%sDone%s %d manual(s) → %s%s%s\n", cGreen, cReset, count, cCyan, dir, cReset)
+	return nil
+}
+
+func printUsage() {
+	fmt.Printf(`mann — interactive cheat-sheet picker
+
+Usage:
+  mann            open the interactive picker (needs fzf)
+  mann -u         update the catalog: download the latest manuals from
+                  %s into
+                  %s (per-user, no sudo)
+  mann -h         show this help
+
+Override the catalog location:
+  MANN_DATA_DIR=/some/dir mann -u
+
+Downloaded manuals override the built-in ones by filename at runtime.
+`, repoName, dataDir())
+}
 
 func have(bin string) bool {
 	_, err := exec.LookPath(bin)
@@ -159,11 +288,14 @@ func readCommand(lines []string, start int) (string, int) {
 }
 
 func loadItems() ([]Item, error) {
+	// filename -> markdown content. Embedded catalog first; updated manuals
+	// downloaded via `mann -u` overlay it and win by filename.
+	files := map[string]string{}
+
 	entries, err := dataFS.ReadDir("data")
 	if err != nil {
 		return nil, err
 	}
-	var all []Item
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
 			continue
@@ -175,7 +307,36 @@ func loadItems() ([]Item, error) {
 		if err != nil {
 			return nil, err
 		}
-		all = append(all, parseFile(string(b))...)
+		files[e.Name()] = string(b)
+	}
+
+	if dir := dataDir(); dir != "" {
+		if ents, err := os.ReadDir(dir); err == nil {
+			for _, e := range ents {
+				if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+					continue
+				}
+				if strings.EqualFold(e.Name(), "README.md") {
+					continue
+				}
+				b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+				if err != nil {
+					continue
+				}
+				files[e.Name()] = string(b)
+			}
+		}
+	}
+
+	names := make([]string, 0, len(files))
+	for n := range files {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+
+	var all []Item
+	for _, n := range names {
+		all = append(all, parseFile(files[n])...)
 	}
 	sort.SliceStable(all, func(i, j int) bool {
 		if all[i].Section != all[j].Section {
@@ -326,6 +487,20 @@ func fallbackList(items []Item) {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-u", "--update", "update":
+			if err := updateCatalog(); err != nil {
+				fmt.Fprintf(os.Stderr, "%supdate error:%s %v\n", cMag, cReset, err)
+				os.Exit(1)
+			}
+			return
+		case "-h", "--help", "help":
+			printUsage()
+			return
+		}
+	}
+
 	items, err := loadItems()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "load error:", err)
