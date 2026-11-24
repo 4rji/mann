@@ -44,6 +44,21 @@ Just packs files into one, without compressing. Use it when the content is alrea
 
 Skip paths matching a pattern. Repeat `--exclude` once per pattern. Put the `--exclude` options before `DIR`. Useful to keep caches, dependencies and logs out of a backup.
 
+## Compress dir with password — encrypted tar.gz with gpg (AES256)
+`tar -czf - DIR | gpg -c --cipher-algo AES256 -o ARCHIVE.tar.gz.gpg`
+
+`tar` cannot set passwords by itself, so the archive is piped into `gpg -c` (symmetric encryption), which asks for the password twice. Nothing unencrypted is written to disk. File names and contents are both hidden. Needs `gnupg` (installed on most Linux systems). Use `-cJf -` or `--zstd -cf -` instead of `-czf -` for xz or zstd.
+
+## Extract a password-protected tar.gz.gpg
+`gpg -d ARCHIVE.tar.gz.gpg | tar -xzvf -`
+
+Asks for the password, decrypts to stdout and unpacks it in the current directory. Add `-C DEST` at the end to unpack elsewhere. To only list the contents: `gpg -d ARCHIVE.tar.gz.gpg | tar -tzf -`.
+
+## Compress dir with password using openssl (no gpg available)
+`tar -czf - DIR | openssl enc -aes-256-cbc -pbkdf2 -salt -out ARCHIVE.tar.gz.enc`
+
+Same idea with `openssl`, which is on almost every machine. Always keep `-pbkdf2`: without it the password is turned into a key in a weak way. Decrypt and extract with `openssl enc -d -aes-256-cbc -pbkdf2 -in ARCHIVE.tar.gz.enc | tar -xzvf -`, using the same options as when encrypting.
+
 ## Extract archive here — any format, auto-detected
 `tar -xvf ARCHIVE.tar.gz`
 
@@ -115,6 +130,8 @@ tar -czvf backup.tar.gz /etc/nginx
 tar -cJvf release-1.0.tar.xz project/
 tar --zstd -cvf home-backup.tar.zst --exclude='.cache' /home/user
 tar -cvf photos.tar ~/Pictures
+tar -czf - ~/Documents | gpg -c --cipher-algo AES256 -o docs.tar.gz.gpg
+gpg -d docs.tar.gz.gpg | tar -xzvf - -C /tmp/restore
 tar -xvf backup.tar.gz -C /tmp/restore
 tar -xvf node-v20.tar.xz --strip-components=1 -C /opt/node
 tar -tvf backup.tar.gz
