@@ -15,132 +15,154 @@ Which compression to choose:
 | `.tar.xz` | `-J`      | very slow  | best      | Distribution/long-term storage where size matters more than time (releases, archives you upload once and download many times). |
 | `.tar.zst`| `--zstd`  | very fast  | very good | Modern default when both ends have `zstd`: near-xz size at gzip speed or better. Great for big backups. |
 
+<!-- list: Create a tar.gz | Crear un tar.gz -->
 <!-- es: Comprimir un directorio en tar.gz (rápido y compatible) -->
 ## Compress dir as tar.gz — fast, works everywhere (default choice)
 `tar -czvf ARCHIVE.tar.gz DIR`
 
 Gzip compression. Not the smallest file, but quick to create and every system can open it. Use it when in doubt, when sending to someone else, or for everyday backups.
 
+<!-- list: Create a tar.bz2 | Crear un tar.bz2 -->
 <!-- es: Comprimir un directorio en tar.bz2 (formato antiguo, más lento que gzip) -->
 ## Compress dir as tar.bz2 — smaller than gz but slow (legacy)
 `tar -cjvf ARCHIVE.tar.bz2 DIR`
 
 Bzip2 compression. Produces ~10–15% smaller files than gzip but takes several times longer. Today xz or zstd beat it on both size and speed, so use bz2 only when a tool or person specifically requires it.
 
+<!-- list: Create a tar.xz | Crear un tar.xz -->
 <!-- es: Comprimir un directorio en tar.xz para distribuirlo o almacenarlo a largo plazo -->
 ## Compress dir as tar.xz — smallest file, slowest (releases, long-term storage)
 `tar -cJvf ARCHIVE.tar.xz DIR`
 
 XZ (LZMA2) compression. Best ratio of the classic formats but slow to compress and memory hungry. Good for files you create once and download/store many times, such as software releases or archived logs. To use all CPU cores: `XZ_OPT=-T0 tar -cJvf ARCHIVE.tar.xz DIR`.
 
+<!-- list: Create a tar.zst | Crear un tar.zst -->
 <!-- es: Comprimir un directorio en tar.zst (rápido y compacto, requiere zstd) -->
 ## Compress dir as tar.zst — very fast and small (modern, needs zstd)
 `tar --zstd -cvf ARCHIVE.tar.zst DIR`
 
 Zstandard compression. Close to xz size at gzip speed or faster, and decompresses extremely fast. Best for large backups and transfers when both machines have `zstd` installed (`apt install zstd`).
 
+<!-- list: Create an uncompressed tar | Crear un tar sin comprimir -->
 <!-- es: Empaquetar un directorio en un tar sin compresión -->
 ## Bundle dir as plain tar — no compression (media, zips, appendable)
 `tar -cvf ARCHIVE.tar DIR`
 
 Just packs files into one, without compressing. Use it when the content is already compressed (videos, images, .zip, .gz files) so compressing again only wastes CPU, or when you plan to append files later with `-r`.
 
+<!-- list: Exclude files and folders | Excluir archivos y carpetas -->
 <!-- es: Comprimir un directorio excluyendo archivos o carpetas (logs, node_modules, .git) -->
 ## Compress dir excluding files or folders (logs, node_modules, .git)
 `tar -czvf ARCHIVE.tar.gz --exclude='*.log' --exclude='node_modules' DIR`
 
 Skip paths matching a pattern. Repeat `--exclude` once per pattern. Put the `--exclude` options before `DIR`. Useful to keep caches, dependencies and logs out of a backup.
 
+<!-- list: Encrypt a tar.gz with GPG | Cifrar un tar.gz con GPG -->
 <!-- es: Crear un tar.gz protegido con contraseña mediante GPG y AES-256 -->
 ## Compress dir with password — encrypted tar.gz with gpg (AES256)
 `tar -czf - DIR | gpg -c --cipher-algo AES256 -o ARCHIVE.tar.gz.gpg`
 
 `tar` cannot set passwords by itself, so the archive is piped into `gpg -c` (symmetric encryption), which asks for the password twice. Nothing unencrypted is written to disk. File names and contents are both hidden. Needs `gnupg` (installed on most Linux systems). Use `-cJf -` or `--zstd -cf -` instead of `-czf -` for xz or zstd.
 
+<!-- list: Extract a GPG-encrypted tar.gz | Extraer un tar.gz cifrado (GPG) -->
 <!-- es: Extraer un tar.gz.gpg protegido con contraseña -->
 ## Extract a password-protected tar.gz.gpg
 `gpg -d ARCHIVE.tar.gz.gpg | tar -xzvf -`
 
 Asks for the password, decrypts to stdout and unpacks it in the current directory. Add `-C DEST` at the end to unpack elsewhere. To only list the contents: `gpg -d ARCHIVE.tar.gz.gpg | tar -tzf -`.
 
+<!-- list: Encrypt a tar.gz with OpenSSL | Cifrar un tar.gz con OpenSSL -->
 <!-- es: Comprimir y cifrar un directorio con contraseña mediante OpenSSL -->
 ## Compress dir with password using openssl (no gpg available)
 `tar -czf - DIR | openssl enc -aes-256-cbc -pbkdf2 -salt -out ARCHIVE.tar.gz.enc`
 
 Same idea with `openssl`, which is on almost every machine. Always keep `-pbkdf2`: without it the password is turned into a key in a weak way. Decrypt and extract with `openssl enc -d -aes-256-cbc -pbkdf2 -in ARCHIVE.tar.gz.enc | tar -xzvf -`, using the same options as when encrypting.
 
+<!-- list: Extract here | Extraer aquí -->
 <!-- es: Extraer aquí un archivo tar detectando el formato automáticamente -->
 ## Extract archive here — any format, auto-detected
 `tar -xvf ARCHIVE.tar.gz`
 
 Unpacks into the current directory. GNU tar detects gzip, bzip2, xz and zstd automatically, so the same command works for `.tar.gz`, `.tgz`, `.tar.bz2`, `.tar.xz` and `.tar.zst`. Files with the same name are overwritten. Check the contents first with `tar -tf` if you are unsure where it will unpack.
 
+<!-- list: Extract to another directory | Extraer en otro directorio -->
 <!-- es: Extraer un archivo tar en otro directorio -->
 ## Extract archive into another directory
 `tar -xvf ARCHIVE.tar.gz -C DEST`
 
 Same as above but unpacks into `DEST` instead of the current directory. `DEST` must already exist (`mkdir -p DEST`).
 
+<!-- list: Extract one file | Extraer un solo archivo -->
 <!-- es: Extraer un solo archivo del tar -->
 ## Extract only one file from the archive
 `tar -xvf ARCHIVE.tar.gz path/inside/FILE`
 
 Pulls out a single file (or folder) without unpacking everything. The path must match exactly what `tar -tf` shows, usually without a leading `/`.
 
+<!-- list: Strip the top directory | Omitir la carpeta superior -->
 <!-- es: Extraer el contenido omitiendo la carpeta de nivel superior -->
 ## Extract dropping the top folder (project-1.0/ → contents directly)
 `tar -xvf ARCHIVE.tar.gz --strip-components=1 -C DEST`
 
 Many downloads wrap everything in one folder like `project-1.0/`. This removes that first level so the files land directly in `DEST`. Use `=2` to drop two levels.
 
+<!-- list: Restore owners and permissions | Restaurar dueños y permisos -->
 <!-- es: Restaurar una copia conservando permisos y propietarios -->
 ## Extract keeping original permissions and owners (restore backups)
 `sudo tar -xpvf ARCHIVE.tar.gz -C DEST`
 
 `-p` preserves the file modes stored in the archive; running as root also restores the original owners. Use it when restoring system backups such as `/etc` or `/var/www`.
 
+<!-- list: List file names | Listar nombres de archivos -->
 <!-- es: Listar los nombres de los archivos del tar sin extraerlos -->
 ## List archive contents — names only, no extraction
 `tar -tf ARCHIVE.tar.gz`
 
 Shows every path inside the archive without unpacking. Use it before extracting to see the folder layout and avoid unpacking hundreds of files into the current directory.
 
+<!-- list: List file details | Listar detalles de los archivos -->
 <!-- es: Listar permisos, propietarios, tamaños y fechas del contenido -->
 ## List archive contents with details (permissions, owner, size, date)
 `tar -tvf ARCHIVE.tar.gz`
 
 Like `ls -l` for the archive. Useful to check sizes, owners and dates before restoring.
 
+<!-- list: Read a file without unpacking | Leer un archivo sin extraerlo -->
 <!-- es: Leer un archivo del tar sin extraerlo al disco -->
 ## Read a file inside the archive without extracting it
 `tar -xOf ARCHIVE.tar.gz path/inside/FILE`
 
 `-O` sends the file to stdout instead of writing it to disk. Pipe it to `less`, `grep` or redirect it: `tar -xOf ARCHIVE.tar.gz etc/hosts | less`.
 
+<!-- list: Find a file in the archive | Buscar un archivo en el tar -->
 <!-- es: Buscar un archivo dentro del tar -->
 ## Search for a file inside the archive
 `tar -tf ARCHIVE.tar.gz | grep FILE`
 
 Quick way to check whether a file is in the archive and get its exact path for extracting.
 
+<!-- list: Append a file to a tar | Añadir un archivo al tar -->
 <!-- es: Añadir un archivo a un tar sin comprimir -->
 ## Add a file to an existing tar (uncompressed only)
 `tar -rvf ARCHIVE.tar FILE`
 
 Appends `FILE` to the end of the archive. Only works with plain `.tar`; compressed archives must be extracted and recreated.
 
+<!-- list: Compare with files on disk | Comparar con archivos en disco -->
 <!-- es: Comparar el tar con los archivos en disco -->
 ## Compare archive against files on disk (what changed)
 `tar -dvf ARCHIVE.tar`
 
 Run it from the directory where the archive was created. It reports files whose size, date, mode or content differ from the copy in the archive. Handy to verify a backup.
 
+<!-- list: Copy a directory over SSH | Copiar un directorio por SSH -->
 <!-- es: Copiar un directorio por SSH sin crear un archivo temporal -->
 ## Copy dir to a remote host over ssh without temp file
 `tar -czf - DIR | ssh USER@IP 'tar -xzf - -C DEST'`
 
 `-f -` writes the archive to stdout, which goes through SSH and is unpacked on the other side. Keeps permissions and symlinks, and avoids filling the disk with a temporary archive. An alternative to `rsync` or `scp -r` for many small files.
 
+<!-- list: Verify tar.gz integrity | Verificar un tar.gz -->
 <!-- es: Comprobar la integridad de un tar.gz -->
 ## Check that a tar.gz is not corrupted
 `gzip -t ARCHIVE.tar.gz && echo OK`

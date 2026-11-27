@@ -3,6 +3,7 @@
 
 Authorized credential brute-force testing — only use against systems you own or have written permission to test. Replace `IP` with the target host.
 
+<!-- list: SSH brute force (authorized) | Fuerza bruta SSH (autorizada) -->
 <!-- es: Prueba autorizada de fuerza bruta en SSH -->
 ## SSH brute force (authorized)
 `hydra -L users -P passwords ssh://IP`

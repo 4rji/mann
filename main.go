@@ -25,6 +25,8 @@ type Item struct {
 	Description   string
 	SectionES     string
 	DescriptionES string
+	ListEN        string
+	ListES        string
 	Command       string
 	Example       string
 }
@@ -99,7 +101,7 @@ func httpGet(url, accept string) ([]byte, error) {
 
 func writeHint(dir string, err error) error {
 	if errors.Is(err, os.ErrPermission) {
-		return fmt.Errorf("%w\n  No write permission for %s.\n  Pick a writable path:  MANN_DATA_DIR=/some/dir mann -u", err, dir)
+		return fmt.Errorf("%w\n  Sin permiso de escritura en %s.\n  Elige un directorio con permiso de escritura:  MANN_DATA_DIR=/mi/directorio mann -u", err, dir)
 	}
 	return err
 }
@@ -108,15 +110,15 @@ func writeHint(dir string, err error) error {
 func updateCatalog() error {
 	dir := dataDir()
 
-	fmt.Printf("%s==>%s Updating mann catalog from %s%s%s\n", cBlue, cReset, cCyan, repoName, cReset)
+	fmt.Printf("%s==>%s Actualizando el catálogo de mann desde %s%s%s\n", cBlue, cReset, cCyan, repoName, cReset)
 
 	body, err := httpGet(catalogAPI, "application/vnd.github+json")
 	if err != nil {
-		return fmt.Errorf("list catalog: %w", err)
+		return fmt.Errorf("no se pudo consultar el catálogo: %w", err)
 	}
 	var contents []ghContent
 	if err := json.Unmarshal(body, &contents); err != nil {
-		return fmt.Errorf("parse catalog listing: %w", err)
+		return fmt.Errorf("no se pudo leer el índice del catálogo: %w", err)
 	}
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -133,7 +135,7 @@ func updateCatalog() error {
 		}
 		data, err := httpGet(c.DownloadURL, "")
 		if err != nil {
-			return fmt.Errorf("download %s: %w", c.Name, err)
+			return fmt.Errorf("descarga de %s: %w", c.Name, err)
 		}
 		dest := filepath.Join(dir, c.Name)
 		if err := os.WriteFile(dest, data, 0o644); err != nil {
@@ -143,28 +145,29 @@ func updateCatalog() error {
 		count++
 	}
 
-	fmt.Printf("%sDone%s %d manual(s) → %s%s%s\n", cGreen, cReset, count, cCyan, dir, cReset)
+	fmt.Printf("%sListo%s · Manuales descargados: %d → %s%s%s\n", cGreen, cReset, count, cCyan, dir, cReset)
 	return nil
 }
 
 func printUsage() {
-	fmt.Printf(`mann — interactive cheat-sheet picker
+	fmt.Printf(`mann — catálogo interactivo de comandos
 
-Usage:
-  mann            open the interactive picker (needs fzf)
-  mann -u         update the catalog: download the latest manuals from
-                  %s into
-                  %s (per-user, no sudo)
-  mann -h         show this help
+Uso:
+  mann            abre el selector interactivo (requiere fzf)
+  mann -u         descarga los manuales de %s
+                  en %s (sin sudo)
+  mann -h         muestra esta ayuda
 
-Picker keys:
-  Shift+E  English (default)     Shift+S  Spanish
-  Enter    copy command          Tab      toggle preview     Esc  quit
+Atajos:
+  Shift+S  Español (predeterminado)     Shift+E  English
+  F1       Cian (predeterminado)        F2       Magenta     F3  Ámbar
+  Enter    Copiar el comando            Tab      Mostrar u ocultar la vista previa
+  Esc      Salir
 
-Override the catalog location:
-  MANN_DATA_DIR=/some/dir mann -u
+Para cambiar la ubicación del catálogo:
+  MANN_DATA_DIR=/mi/directorio mann -u
 
-Downloaded manuals override the built-in ones by filename at runtime.
+Los manuales descargados tienen prioridad sobre los incluidos con el mismo nombre.
 `, repoName, dataDir())
 }
 
@@ -182,6 +185,7 @@ func have(bin string) bool {
 //	`command goes here`     (first non-blank, non-heading line below the ## )
 //
 // An optional Spanish translation comment immediately precedes its heading.
+// Entry headings may also have bilingual list captions before the translation.
 func parseFile(content string) []Item {
 	var items []Item
 	var examples []string
@@ -200,26 +204,32 @@ func parseFile(content string) []Item {
 			}
 			cmd, advance := readCommand(lines, i+1)
 			if cmd != "" && section != "" {
+				descES := headingComment(lines, i, "<!-- es:")
+				captionAt := i
+				if descES != "" {
+					captionAt--
+				}
+				listEN, listES := listCaptions(headingComment(lines, captionAt, "<!-- list:"))
 				items = append(items, Item{
 					Section: section, SectionES: sectionES, Description: desc,
-					DescriptionES: spanishHeading(lines, i), Command: cmd,
+					DescriptionES: descES, ListEN: listEN, ListES: listES, Command: cmd,
 				})
 			}
 			i = advance
 		case strings.HasPrefix(t, "# ") && !strings.HasPrefix(t, "## "):
 			section = strings.TrimSpace(t[2:])
-			sectionES = spanishHeading(lines, i)
+			sectionES = headingComment(lines, i, "<!-- es:")
 		}
 	}
 	attachExamples(items, examples)
 	return items
 }
 
-func spanishHeading(lines []string, heading int) string {
+func headingComment(lines []string, heading int, prefix string) string {
 	if heading == 0 {
 		return ""
 	}
-	value, ok := strings.CutPrefix(strings.TrimSpace(lines[heading-1]), "<!-- es:")
+	value, ok := strings.CutPrefix(strings.TrimSpace(lines[heading-1]), prefix)
 	if !ok {
 		return ""
 	}
@@ -228,6 +238,15 @@ func spanishHeading(lines []string, heading int) string {
 		return ""
 	}
 	return strings.TrimSpace(value)
+}
+
+func listCaptions(value string) (string, string) {
+	en, es, ok := strings.Cut(value, "|")
+	en, es = strings.TrimSpace(en), strings.TrimSpace(es)
+	if !ok || en == "" || es == "" || strings.Contains(es, "|") {
+		return "", ""
+	}
+	return en, es
 }
 
 // readFence reads a triple-backtick fenced block starting after a heading.
@@ -294,7 +313,7 @@ func readCommand(lines []string, start int) (string, int) {
 		if nt == "" {
 			continue
 		}
-		if strings.HasPrefix(nt, "#") || strings.HasPrefix(nt, "<!-- es:") {
+		if strings.HasPrefix(nt, "#") || strings.HasPrefix(nt, "<!-- es:") || strings.HasPrefix(nt, "<!-- list:") {
 			return "", j - 1
 		}
 		if strings.HasPrefix(nt, "```") {
@@ -320,6 +339,15 @@ func inheritTranslations(items, embedded []Item) {
 			}
 			it.Section, it.SectionES = inheritHeading(it.Section, it.SectionES, base.Section, base.SectionES)
 			it.Description, it.DescriptionES = inheritHeading(it.Description, it.DescriptionES, base.Description, base.DescriptionES)
+			if !strings.EqualFold(it.Description, base.Description) {
+				continue
+			}
+			if it.ListEN == "" {
+				it.ListEN = base.ListEN
+			}
+			if it.ListES == "" && strings.EqualFold(it.DescriptionES, base.DescriptionES) {
+				it.ListES = base.ListES
+			}
 		}
 	}
 }
@@ -468,7 +496,7 @@ func clipInstallHint() string {
 }
 
 func fallbackList(items []Item) {
-	fmt.Println("Install fzf for interactive filtering. Listing all entries:")
+	fmt.Println("Instala fzf para filtrar el catálogo. Estas son todas las entradas:")
 	fmt.Println()
 	for _, it := range items {
 		fmt.Printf("%s%s%s | %s%s%s\n  %s%s%s\n",
@@ -483,7 +511,7 @@ func main() {
 		switch os.Args[1] {
 		case "-u", "--update", "update":
 			if err := updateCatalog(); err != nil {
-				fmt.Fprintf(os.Stderr, "%supdate error:%s %v\n", cMag, cReset, err)
+				fmt.Fprintf(os.Stderr, "%serror de actualización:%s %v\n", cMag, cReset, err)
 				os.Exit(1)
 			}
 			return
@@ -495,16 +523,16 @@ func main() {
 
 	items, err := loadItems()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "load error:", err)
+		fmt.Fprintln(os.Stderr, "error al cargar el catálogo:", err)
 		os.Exit(1)
 	}
 	if len(items) == 0 {
-		fmt.Fprintln(os.Stderr, "no items found in data/")
+		fmt.Fprintln(os.Stderr, "no se encontraron entradas en data/")
 		os.Exit(1)
 	}
 
 	if !have("fzf") {
-		fallbackList(items)
+		fallbackList(spanishItems(items))
 		os.Exit(1)
 	}
 

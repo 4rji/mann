@@ -3,12 +3,14 @@
 
 Stream editor for filtering and transforming text. Process files line by line without loading the entire file into memory.
 
+<!-- list: Replace first match per line | Reemplazar la primera coincidencia -->
 <!-- es: Reemplazar la primera coincidencia de cada línea -->
 ## Replace first match on each line
 `sed 's/old/new/' file.txt`
 
 Replace the first occurrence of `old` with `new` on every line.
 
+<!-- list: Replace every match per line | Reemplazar todas las coincidencias -->
 <!-- es: Reemplazar todas las coincidencias de cada línea -->
 ## Replace every match on each line
 `sed 's/old/new/g' file.txt`
@@ -21,18 +23,21 @@ Use the `g` flag to replace all matches on each line, not just the first one.
 
 Modify the file directly instead of printing the changed output to the terminal.
 
+<!-- list: Edit in place with backup | Editar con copia de seguridad -->
 <!-- es: Editar un archivo y guardar una copia de seguridad -->
 ## Edit in place with backup
 `sed -i.bak 's/old/new/g' file.txt`
 
 Modify the file directly and keep the original content in a `.bak` backup file.
 
+<!-- list: Delete matching lines | Eliminar líneas que coincidan -->
 <!-- es: Eliminar las líneas que coincidan con el patrón -->
 ## Delete matching lines
 `sed '/pattern/d' file.txt`
 
 Remove every line that matches `pattern`.
 
+<!-- list: Keep only matching lines | Conservar líneas que coincidan -->
 <!-- es: Conservar solo las líneas que coincidan con el patrón -->
 ## Keep only matching lines
 `sed '/pattern/!d' file.txt`
@@ -69,18 +74,21 @@ Insert `text` before line 1.
 
 Append `text` after line 1.
 
+<!-- list: Print between two patterns | Mostrar entre dos patrones -->
 <!-- es: Mostrar las líneas comprendidas entre dos patrones -->
 ## Print between two patterns
 `sed -n '/start/,/end/p' file.txt`
 
 Print the section from the first `start` match through the next `end` match.
 
+<!-- list: Replace ignoring case | Reemplazar ignorando mayúsculas -->
 <!-- es: Reemplazar sin distinguir entre mayúsculas y minúsculas -->
 ## Replace ignoring case
 `sed 's/old/new/gi' file.txt`
 
 Replace all case variations of `old`, such as `old`, `Old`, or `OLD`.
 
+<!-- list: Replace only inside a section | Reemplazar dentro de una sección -->
 <!-- es: Reemplazar texto solo dentro de una sección -->
 ## Replace only inside a section
 `sed '/start/,/end/s/old/new/g' file.txt`

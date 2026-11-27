@@ -3,6 +3,7 @@
 
 `find` recipes for relocating files across nested directories.
 
+<!-- list: Move .py files up | Mover los .py al nivel superior -->
 <!-- es: Mover los archivos .py de los subdirectorios al directorio actual -->
 ## Move py files up
 `find . -mindepth 2 -type f -name '*.py' -exec mv {} . \;`

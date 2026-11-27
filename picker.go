@@ -8,39 +8,83 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/rivo/uniseg"
 )
 
 type pickerText struct {
-	catalog, prompt, controls, languageBar, command, example, copied, clipboardUnavailable string
+	prompt, controls, action, command, example, copied, clipboardUnavailable string
+	spanishCaptions                                                          bool
 }
 
 const (
-	ice        = "\x1b[38;2;100;223;211m"
-	orchid     = "\x1b[38;2;239;141;215m"
 	slate      = "\x1b[38;2;157;170;196m"
-	brand      = "\x1b[1;38;2;16;19;30;48;2;100;223;211m MANN \x1b[0m"
 	englishKey = "Shift+E English"
 	spanishKey = "Shift+S Español"
 )
 
+type pickerTheme struct {
+	key, nameEN, nameES                      string
+	bg, previewBG, accent, secondary, border uint32
+}
+
+var pickerThemes = [...]pickerTheme{
+	{key: "f1", nameEN: "Cyan", nameES: "Cian", bg: 0x10141c, previewBG: 0x18212d, accent: 0x7bddcf, secondary: 0xf497bf, border: 0x536579},
+	{key: "f2", nameEN: "Magenta", nameES: "Magenta", bg: 0x1a1320, previewBG: 0x261b2f, accent: 0xf3a1dc, secondary: 0xc9aeff, border: 0x75597e},
+	{key: "f3", nameEN: "Amber", nameES: "Ámbar", bg: 0x191611, previewBG: 0x272016, accent: 0xf3c475, secondary: 0x9ad4bb, border: 0x786948},
+}
+
+func foreground(rgb uint32) string {
+	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm", rgb>>16, (rgb>>8)&0xff, rgb&0xff)
+}
+
+func (theme pickerTheme) fzfColors() string {
+	return fmt.Sprintf(
+		"fg:#d2d7e1,fg+:#ffffff,bg:#%06x,bg+:#%06x,hl:#%06x,hl+:#%06x,"+
+			"prompt:#%06x,pointer:#%06x,header:#d2d7e1,border:#%06x,info:#9caebe,preview-bg:#%06x,preview-fg:#e3ebf3",
+		theme.bg, theme.bg, theme.accent, theme.accent, theme.accent, theme.secondary, theme.border, theme.previewBG,
+	)
+}
+
 func keyHint(key, action string) string {
-	return ice + key + cReset + " " + action
+	return key + " " + slate + action + cReset
 }
 
 var english = pickerText{
-	catalog: "Command catalog", prompt: "Search › ",
-	controls:    keyHint("Enter", "Copy") + "   " + keyHint("Tab", "Preview") + "   " + keyHint("Esc", "Quit"),
-	languageBar: ice + englishKey + cReset + "  /  " + spanishKey,
-	command:     "Command", example: "Example", copied: "Copied via",
+	prompt:   "Search  › ",
+	controls: keyHint("Enter", "Copy") + "   " + keyHint("Tab", "Preview") + "   " + keyHint("Esc", "Quit"),
+	action:   "Action", command: "Command", example: "Example", copied: "Copied via",
 	clipboardUnavailable: "Could not copy the command to the clipboard.",
 }
 
 var spanish = pickerText{
-	catalog: "Catálogo de comandos", prompt: "Buscar › ",
-	controls:    keyHint("Enter", "Copiar") + "   " + keyHint("Tab", "Vista previa") + "   " + keyHint("Esc", "Salir"),
-	languageBar: englishKey + "  /  " + ice + spanishKey + cReset,
-	command:     "Comando", example: "Ejemplo", copied: "Copiado con",
+	spanishCaptions: true,
+	prompt:          "Buscar  › ",
+	controls:        keyHint("Enter", "Copiar") + "   " + keyHint("Tab", "Vista previa") + "   " + keyHint("Esc", "Salir"),
+	action:          "Acción", command: "Comando", example: "Ejemplo", copied: "Copiado con",
 	clipboardUnavailable: "No se pudo copiar el comando al portapapeles.",
+}
+
+func (ui pickerText) footer(active pickerTheme) string {
+	accent := foreground(active.accent)
+	languages := accent + englishKey + cReset + " / " + spanishKey
+	if ui.spanishCaptions {
+		languages = englishKey + " / " + accent + spanishKey + cReset
+	}
+
+	shortcuts := make([]string, 0, len(pickerThemes))
+	for _, theme := range pickerThemes {
+		name := theme.nameEN
+		if ui.spanishCaptions {
+			name = theme.nameES
+		}
+		label := strings.ToUpper(theme.key) + " " + name
+		if theme.key == active.key {
+			label = accent + "\x1b[1m" + label + cReset
+		}
+		shortcuts = append(shortcuts, label)
+	}
+	return " " + languages + "  │  " + strings.Join(shortcuts, "  ") + " "
 }
 
 func spanishItems(items []Item) []Item {
@@ -62,10 +106,48 @@ func spanishItems(items []Item) []Item {
 // Separate fields with a unit separator so tabs inside commands survive the preview.
 const fieldSep = "\x1f"
 
-func runPicker(items []Item, ui pickerText, query string) ([]string, error) {
+func (ui pickerText) caption(it Item) string {
+	label := it.ListEN
+	if ui.spanishCaptions {
+		label = it.ListES
+	}
+	if label == "" {
+		return it.Description
+	}
+	return label
+}
+
+// Size actions in terminal cells so an accent or a wide glyph never shifts the command.
+func actionColumn(label string) string {
+	const width = 34
+	label = strings.ReplaceAll(label, "\t", " ")
+	size := uniseg.StringWidth(label)
+	if size <= width {
+		return label + strings.Repeat(" ", width-size)
+	}
+	var out strings.Builder
+	size = 0
+	clusters := uniseg.NewGraphemes(label)
+	for clusters.Next() {
+		if size+clusters.Width() > width-1 {
+			break
+		}
+		out.WriteString(clusters.Str())
+		size += clusters.Width()
+	}
+	return out.String() + "…" + strings.Repeat(" ", width-1-size)
+}
+
+func runPicker(items []Item, ui pickerText, theme pickerTheme, query string) ([]string, error) {
 	var input strings.Builder
+	accent := foreground(theme.accent)
+	divider := "  " + foreground(theme.border) + "│" + cReset + "  "
+	// fzf applies --with-nth=6 to the sticky column headings as well.
+	headings := accent + actionColumn(strings.ToUpper(ui.action)) + divider + accent + strings.ToUpper(ui.command) + cReset
+	input.WriteString(strings.Repeat(fieldSep, 5) + headings + "\x00")
 	for i, it := range items {
-		display := it.Description + slate + "  ·  " + it.Section + cReset
+		firstLine, _, _ := strings.Cut(it.Command, "\n")
+		display := actionColumn(ui.caption(it)) + divider + slate + firstLine + cReset
 		example := it.Example
 		if example == it.Command {
 			example = ""
@@ -76,17 +158,21 @@ func runPicker(items []Item, ui pickerText, query string) ([]string, error) {
 	}
 
 	// fzf shell-quotes each placeholder. Only fixed UI labels enter the format string.
-	preview := fmt.Sprintf(`printf '%s%%s%s\n\033[1m%%s%s\n\n%s▍ %s%s\n%%s\n' {2} {3} {4}; test -z {5} || printf '\n%s▍ %s%s\n%%s\n' {5}`,
-		slate, cReset, cReset, ice, strings.ToUpper(ui.command), cReset, orchid, strings.ToUpper(ui.example), cReset)
+	preview := fmt.Sprintf(`printf '%s%%s%s  ·  %%s\n%s%s%s  %%s\n' {2} {3} {4}; test -z {5} || printf '%s%s%s  %%s\n' {5}`,
+		slate, cReset, accent, strings.ToUpper(ui.command), cReset, foreground(theme.secondary), strings.ToUpper(ui.example), cReset)
+	keys := []string{"E", "S"}
+	for _, option := range pickerThemes {
+		keys = append(keys, option.key)
+	}
+	brand := "\x1b[1m" + accent + "MANN" + cReset
 	cmd := exec.Command("fzf",
 		"--ansi", "--exact", "--read0", "--print0", "--delimiter="+fieldSep, "--with-nth=6",
-		"--print-query", "--expect=E,S", "--query="+query,
-		"--prompt="+ui.prompt, "--header-first", "--header="+brand+"  "+ui.catalog+"\n"+ui.controls,
-		"--border-label= "+ui.languageBar+" ", "--border-label-pos=3:bottom",
-		"--height=80%", "--layout=reverse", "--border=sharp", "--info=inline", "--pointer=▌",
-		"--color=fg:#ccd5e6,bg:#10131e,fg+:#ffffff,bg+:#353049,hl:#66eada,hl+:#8affef,"+
-			"pointer:#ef8dd7,prompt:#64dfd3,header:#c1cbe0,border:#7784a9,info:#9eaac5,preview-bg:#171c2b,preview-fg:#e5ecfa",
-		"--preview", preview, "--preview-window=right,44%,wrap,border-left,<42(down,45%,border-top)",
+		"--print-query", "--expect="+strings.Join(keys, ","), "--query="+query,
+		"--prompt="+ui.prompt, "--header-first", "--header-lines=1", "--header="+brand+"   "+ui.controls,
+		"--border-label="+ui.footer(theme), "--border-label-pos=3:bottom",
+		"--height=95%", "--layout=reverse", "--border=rounded", "--info=default", "--pointer=▸", "--no-hscroll",
+		"--color="+theme.fzfColors(),
+		"--preview", preview, "--preview-window=down,5,wrap,border-top",
 		"--bind=tab:toggle-preview",
 	)
 	cmd.Stdin = strings.NewReader(input.String())
@@ -101,17 +187,19 @@ func runPicker(items []Item, ui pickerText, query string) ([]string, error) {
 		if exit.ExitCode() == 130 {
 			return nil, nil
 		}
-		// A language key can be pressed when the current search has no matches.
+		// A language or theme key can be pressed even when the search has no matches.
 	}
 	return strings.Split(strings.TrimSuffix(string(out), "\x00"), "\x00"), nil
 }
 
 func pickCommand(items []Item) error {
 	localized := spanishItems(items)
-	entries, ui := items, english
+	entries, ui := localized, spanish
+	theme := pickerThemes[0]
 	query := ""
+picker:
 	for {
-		result, err := runPicker(entries, ui, query)
+		result, err := runPicker(entries, ui, theme, query)
 		if err != nil || len(result) < 2 {
 			return err
 		}
@@ -122,6 +210,12 @@ func pickCommand(items []Item) error {
 		case "E":
 			entries, ui = items, english
 		default:
+			for _, option := range pickerThemes {
+				if result[1] == option.key {
+					theme = option
+					continue picker
+				}
+			}
 			if len(result) < 3 {
 				return nil
 			}

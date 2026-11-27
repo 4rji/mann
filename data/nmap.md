@@ -9,6 +9,7 @@ Network discovery and port scanning. Replace `IP` with a target host or `IP/24` 
 
 List target hostnames without sending probes — passive enumeration based on DNS lookups.
 
+<!-- list: Vulnerability scripts | Scripts de vulnerabilidades -->
 <!-- es: Scripts de detección de vulnerabilidades -->
 ## Vuln scripts
 `nmap --script vuln IP`

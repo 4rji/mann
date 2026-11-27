@@ -3,6 +3,7 @@
 
 Layer-2 host discovery on the local segment. Replace `INTERFACE` with your network interface and `IP` ranges with real values.
 
+<!-- list: arp-scan address range | arp-scan por rango de IP -->
 <!-- es: Explorar un rango de direcciones con arp-scan -->
 ## arp-scan range
 `sudo arp-scan -I INTERFACE IP_START-IP_END`

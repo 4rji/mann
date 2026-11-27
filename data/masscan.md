@@ -9,6 +9,7 @@ Mass scanner for IPv4 ranges. Always run with `sudo` because it crafts raw packe
 
 Scan a /26 for the listed ports at 10k pkt/s.
 
+<!-- list: Scan the top 100 ports | Los 100 puertos más comunes -->
 <!-- es: Escanear los 100 puertos más comunes -->
 ## Top ports 100
 `sudo masscan -p1-65535 IP/24 --top-ports 100 --rate=10000 -i INTERFACE`

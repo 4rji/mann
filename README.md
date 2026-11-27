@@ -1,6 +1,6 @@
 # mann
 
-`mann` is a terminal command reference for system administration, networking, and authorized security testing. Search the catalog, preview a command, and press Enter to print and copy it. Each session starts in English. Press **Shift+S** for Spanish or **Shift+E** for English.
+`mann` is a terminal command reference for system administration, networking, and authorized security testing. Search the catalog, preview a command, and press Enter to print and copy it. Each session starts in Spanish. Press **Shift+E** for English or **Shift+S** to return to Spanish.
 
 The Go port of `mann.sh` uses `fzf` for the interactive picker and embeds the Markdown manuals in the binary.
 
@@ -10,7 +10,7 @@ The Go port of `mann.sh` uses `fzf` for the interactive picker and embeds the Ma
 - `fzf` 0.35.0 or later on `$PATH` for the interactive picker
 - A clipboard helper for your platform (see install table below). On a headless box without one, the command still prints to stdout — the binary just reports the missing backend.
 
-If `fzf` is missing, `mann` prints the full cheat list to stdout and exits — so it’s still usable as a static reference.
+If `fzf` is missing, `mann` prints the catalog in Spanish as a static list and exits.
 
 ## Install
 
@@ -48,17 +48,18 @@ The catalog under `data/` is embedded at compile time, so you must re-build afte
 
 | Key | Action |
 | --- | --- |
-| Type | Filter entries by section or description. Lowercase `e` and `s` are ordinary search characters. |
+| Type | Search the displayed action caption and command. Lowercase `e` and `s` are ordinary search characters. |
 | `↑` / `↓` | Move through matches. |
-| `Shift+S` | Show the picker and catalog headings in Spanish. |
-| `Shift+E` | Show them in English. |
+| `Shift+E` | Show the picker and catalog headings in English. |
+| `Shift+S` | Return to Spanish. |
+| `F1` / `F2` / `F3` | Switch to Cyan, Magenta, or Amber. |
 | `Tab` | Show or hide the command preview. |
 | `Enter` | Print the selected command and copy it to the clipboard. |
 | `Esc` / `Ctrl+C` | Quit the picker. |
 
-The language shortcuts appear on the bottom border of the picker. Switching languages keeps your search text. Matches can change when the section names and descriptions change language. For example, search for `tmux`, then press `Shift+S` to browse the same topic in Spanish.
+The bottom border shows the language and color shortcuts. Each session starts with Cyan. Changing the palette keeps the current language and search text. Switching languages keeps the palette and search text. Matches can change when the action captions change language.
 
-The preview shows the command and a matching example when available. After selection, the terminal shows which clipboard tool handled the copy. Paste the command into your notes or terminal and fill in any placeholders before use.
+The full-width list has a fixed-width action column, so commands line up beside their captions. The command column shows the first line of the invocation. The preview below gives the section title, full description, complete command, and a distinct example when available. After selection, the terminal shows which clipboard tool handled the copy. Paste the command into your notes or terminal and fill in any placeholders before use.
 
 ### Updating the catalog (`-u`)
 

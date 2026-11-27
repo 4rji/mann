@@ -13,6 +13,7 @@ scan: `snyk_trust` the folder, then `snyk_auth`.
 
 Typical flow: trust -> auth -> scan -> fix -> re-scan.
 
+<!-- list: Start Snyk MCP over stdio | Iniciar Snyk MCP por stdio -->
 <!-- es: Iniciar el servidor MCP de Snyk por stdio desde la configuración del cliente -->
 ## Start the Snyk MCP server over stdio (shell command, goes in the client config)
 `snyk mcp -t stdio`
@@ -20,6 +21,7 @@ Typical flow: trust -> auth -> scan -> fix -> re-scan.
 The one real CLI command here. Put it as the `command` of an MCP server entry in your client
 config. Use `-t sse` instead if the client wants an HTTP/SSE transport.
 
+<!-- list: Trust a folder for scanning | Marcar carpeta de confianza -->
 <!-- es: Marcar una carpeta como de confianza para que Snyk pueda analizarla -->
 ## Trust a folder so Snyk may scan it
 `snyk_trust`
@@ -35,6 +37,7 @@ a subfolder.
 Opens a browser to log in, or uses an API token if one is configured. Needed once per machine;
 the token is cached locally. Every scan tool fails with an auth error until this succeeds.
 
+<!-- list: Log out and clear token | Cerrar sesión y borrar el token -->
 <!-- es: Cerrar la sesión y borrar el token guardado -->
 ## Log out and clear the stored token
 `snyk_logout`
@@ -42,6 +45,7 @@ the token is cached locally. Every scan tool fails with an auth error until this
 Deletes the locally stored auth token. Use it to switch accounts or before handing over a
 shared machine. Re-run `snyk_auth` afterwards.
 
+<!-- list: Scan source code with SAST | Analizar código fuente con SAST -->
 <!-- es: Analizar el código fuente con SAST sin ejecutarlo -->
 ## SAST scan of source code (no execution)
 `snyk_code_scan`
@@ -52,6 +56,7 @@ just what you touched. Fast, so it is the one to re-run after applying a fix. Co
 C/C++, Dart/Flutter, Elixir, Go, Groovy, Java/Kotlin, JavaScript, .NET, PHP, Python, Ruby,
 Rust, Scala, Swift/Objective-C, TypeScript, VB.NET.
 
+<!-- list: Scan dependencies with SCA | Analizar dependencias con SCA -->
 <!-- es: Analizar los manifiestos de dependencias con SCA -->
 ## SCA scan of dependency manifests
 `snyk_sca_scan`
@@ -72,6 +77,7 @@ the base-image upgrade suggestion — usually one FROM line fixes most findings.
 Dockerfile path too when you have it, so it can point at the offending instruction. The image
 must exist locally or be pullable with your current docker credentials.
 
+<!-- list: Check IaC configuration | Comprobar configuración de IaC -->
 <!-- es: Detectar errores de configuración en infraestructura como código -->
 ## Scan Infrastructure as Code for misconfigurations
 `snyk_iac_scan`
@@ -82,6 +88,7 @@ Reads Terraform (.tf and plan JSON), Kubernetes YAML/JSON, AWS CloudFormation, A
 Manager JSON, and Serverless Framework. Each finding names the file, the resource, and the
 line to change.
 
+<!-- list: Scan an SBOM (experimental) | Analizar una SBOM (experimental) -->
 <!-- es: Buscar vulnerabilidades conocidas en una SBOM existente (experimental) -->
 ## Scan an existing SBOM for known vulnerabilities (experimental)
 `snyk_sbom_scan`
@@ -91,6 +98,7 @@ handoff. Give it the path to a CycloneDX or SPDX document. Every component must 
 PackageURL (purl); components without one are silently skipped, so an empty result usually
 means a purl-less SBOM, not a clean one.
 
+<!-- list: Generate Python AI-BOM | Generar AI-BOM de Python -->
 <!-- es: Generar una AI-BOM de Python en JSON CycloneDX v1.6 (experimental) -->
 ## Generate AI-BOM for a Python project (CycloneDX v1.6 JSON, experimental)
 `snyk_aibom`
@@ -107,6 +115,7 @@ it just errors out.
 Sends a free-text message to Snyk from inside the session. For false positives or missing
 coverage. Do not paste code or secrets into it.
 
+<!-- list: Show Snyk MCP version | Mostrar versión de Snyk MCP -->
 <!-- es: Mostrar la versión instalada del servidor MCP de Snyk -->
 ## Show the installed Snyk MCP Server version
 `snyk_version`

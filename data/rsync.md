@@ -3,20 +3,20 @@
 
 Copy a local file or directory named `a` to the remote home directory. Replace `USER` and `IP` with the real username and host.
 
-<!-- es: Copiar al directorio personal remoto por SSH -->
-## Copy to remote home over SSH
+<!-- es: SSH estándar → ~/ remoto -->
+## Default SSH → remote ~/
 `rsync -avz --progress a USER@IP:~/`
 
 Default SSH on port 22.
 
-<!-- es: Copiar al directorio personal remoto por el puerto SSH 2244 -->
-## Copy to remote home over SSH port 2244
+<!-- es: Puerto 2244 → ~/ remoto -->
+## Port 2244 → remote ~/
 `rsync -avz --progress -e "ssh -p 2244" a USER@IP:~/`
 
 Custom SSH port.
 
-<!-- es: Copiar al directorio personal remoto con una clave SSH -->
-## Copy to remote home with an SSH key
+<!-- es: Clave SSH → ~/ remoto -->
+## SSH key → remote ~/
 `rsync -avz --progress -e "ssh -i ~/.ssh/id_ed25519" a USER@IP:~/`
 
 Use a specific SSH key.

@@ -6,6 +6,26 @@ import (
 	"testing"
 )
 
+func TestInheritCaptionsRespectsCustomHeadings(t *testing.T) {
+	base := Item{Description: "Display the date", DescriptionES: "Mostrar la fecha", ListEN: "Date", ListES: "Fecha", Command: "date"}
+	for _, tc := range []struct {
+		item   Item
+		en, es string
+	}{
+		{Item{Description: "Mostrar la fecha", Command: "date"}, "Date", "Fecha"},
+		{Item{Description: "Display the date", DescriptionES: "Mi fecha", Command: "date"}, "Date", ""},
+		{Item{Description: "My date", Command: "date"}, "", ""},
+		{Item{Description: "Display the date", Command: "another command"}, "", ""},
+		{Item{Description: "Display the date", ListEN: "Now", ListES: "Ahora", Command: "date"}, "Now", "Ahora"},
+	} {
+		items := []Item{tc.item}
+		inheritTranslations(items, []Item{base})
+		if got := items[0]; got.ListEN != tc.en || got.ListES != tc.es {
+			t.Errorf("%+v: captions = %q and %q, want %q and %q", tc.item, got.ListEN, got.ListES, tc.en, tc.es)
+		}
+	}
+}
+
 func TestLoadItemsInheritsOnlyMatchingTranslations(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("MANN_DATA_DIR", dir)
