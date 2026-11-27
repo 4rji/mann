@@ -1,7 +1,9 @@
+<!-- es: Uso de Hydra -->
 # Hydra Usage Example
 
 Authorized credential brute-force testing — only use against systems you own or have written permission to test. Replace `IP` with the target host.
 
+<!-- es: Prueba autorizada de fuerza bruta en SSH -->
 ## SSH brute force (authorized)
 `hydra -L users -P passwords ssh://IP`
 

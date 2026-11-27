@@ -1,7 +1,9 @@
+<!-- es: Detección de vulnerabilidades con Nmap -->
 # Nmap for Vulnerability and Safety
 
 Nmap script combinations focused on safe vulnerability detection. Replace `IP` with the target host.
 
+<!-- es: Scripts de las categorías vuln y safe -->
 ## Vuln and safe
 `nmap -p[puerto] IP --script='vuln and safe' -sV`
 

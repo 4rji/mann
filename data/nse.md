@@ -1,7 +1,9 @@
+<!-- es: Búsqueda de scripts NSE -->
 # NSE Script Search
 
 Discover Nmap NSE scripts by category.
 
+<!-- es: Listar las categorías de NSE -->
 ## List NSE categories
 `locate .nse | xargs grep 'categories' | grep -oP '".*?"' | sort -u`
 

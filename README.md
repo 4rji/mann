@@ -1,20 +1,13 @@
 # mann
 
-Interactive cheat-sheet TUI for networking, recon, and pentesting commands. Type to filter, arrows to move, Enter to pick. The selected command is printed to stdout **and** copied to your clipboard, with the clipboard backend reported on screen.
+`mann` is a terminal command reference for system administration, networking, and authorized security testing. Search the catalog, preview a command, and press Enter to print and copy it. Each session starts in English. Press **Shift+S** for Spanish or **Shift+E** for English.
 
-Go port of the original `mann.sh`. Uses real `fzf` under the hood (subprocess) to keep the exact look-and-feel — full ANSI colors, preview pane, key bindings — and bundles the cheat catalog as embedded markdown files inside the binary.
-
-## Why Go instead of bash
-
-- Single static binary — no `wl-copy` / `xclip` / `pbcopy` shell glue, the binary detects the right backend at runtime.
-- Cross-platform clipboard built in: macOS (`pbcopy`), Wayland (`wl-copy`), X11 (`xclip` / `xsel`), Windows (`clip`), Termux (`termux-clipboard-set`).
-- Cheat catalog lives as plain markdown files under `data/`, embedded at build time. One file per section makes it trivial to add, edit, or remove categories.
-- Same UX as the bash version: `fzf` invoked exactly the way you’d expect, just driven from Go.
+The Go port of `mann.sh` uses `fzf` for the interactive picker and embeds the Markdown manuals in the binary.
 
 ## Requirements
 
 - Go 1.22+
-- `fzf` on `$PATH` (the picker uses real fzf so colors and bindings match what you already use)
+- `fzf` 0.35.0 or later on `$PATH` for the interactive picker
 - A clipboard helper for your platform (see install table below). On a headless box without one, the command still prints to stdout — the binary just reports the missing backend.
 
 If `fzf` is missing, `mann` prints the full cheat list to stdout and exits — so it’s still usable as a static reference.
@@ -53,18 +46,19 @@ The catalog under `data/` is embedded at compile time, so you must re-build afte
 ./mann
 ```
 
-- Type to fuzzy-filter the list.
-- `↑` / `↓` to navigate, `Enter` to select, `Esc` / `Ctrl-C` to abort.
-- `Tab` toggles the preview pane.
-- The preview pane shows section, description, and the full command in color.
-- After selection, `mann` prints the chosen command and a line such as `Copied via wl-copy (linux)` so you know which clipboard backend was used.
+| Key | Action |
+| --- | --- |
+| Type | Filter entries by section or description. Lowercase `e` and `s` are ordinary search characters. |
+| `↑` / `↓` | Move through matches. |
+| `Shift+S` | Show the picker and catalog headings in Spanish. |
+| `Shift+E` | Show them in English. |
+| `Tab` | Show or hide the command preview. |
+| `Enter` | Print the selected command and copy it to the clipboard. |
+| `Esc` / `Ctrl+C` | Quit the picker. |
 
-Pipe-friendly:
+The language shortcuts appear on the bottom border of the picker. Switching languages keeps your search text. Matches can change when the section names and descriptions change language. For example, search for `tmux`, then press `Shift+S` to browse the same topic in Spanish.
 
-```sh
-./mann | sh        # run the picked command immediately (use with care)
-./mann >> notes.md # append the command to a notes file
-```
+The preview shows the command and a matching example when available. After selection, the terminal shows which clipboard tool handled the copy. Paste the command into your notes or terminal and fill in any placeholders before use.
 
 ### Updating the catalog (`-u`)
 
@@ -79,6 +73,7 @@ No `sudo` needed — the catalog lives in a per-user directory following the
 XDG spec: `$XDG_DATA_HOME/mann`, or `~/.local/share/mann` by default.
 Downloaded files are read at runtime and **override the built-in ones by
 filename**, so new or updated manuals take effect immediately — no rebuild.
+For older downloads, the picker uses the built-in translations where the command and heading still match.
 
 Override the location with `MANN_DATA_DIR` (used both to download and to read):
 
@@ -106,33 +101,7 @@ If none are found, `mann` prints an install hint for your OS and continues — t
 
 ## Cheat catalog
 
-The catalog lives under `data/` — one markdown file per section. See `data/README.md` for the file format. Quick summary:
-
-```markdown
-# Section Title
-## Description of the command
-`actual command`
-Optional notes — ignored by the parser.
-```
-
-Current sections:
-
-- IP routing (`ip route del`)
-- Nmap (vuln/malware scripts, decoys, source-port tricks)
-- Nmap vuln+safe combinations
-- Masscan (top-ports, custom rate)
-- NSE script discovery
-- Nvidia driver kernel-header install
-- Process / port investigation (`lsof`, `pwdx`)
-- Packet capture (`tcpdump`, `tshark`)
-- Network discovery (`arp-scan`, `netdiscover`)
-- Rsync over SSH (custom port, identity file)
-- SSH keep-alive
-- `find -exec` file moves
-- Hydra (authorized SSH brute force)
-- FTP payload extraction with tshark
-
-To **add** a category, drop a new `data/<name>.md` and re-build. To **remove**, delete its file and re-build. To **edit** an existing command, open the matching file under `data/` — the file name maps directly to the section.
+Each Markdown file under `data/` supplies a section. The catalog covers terminal tools such as tmux, sed, tar and QMD, file transfers, network diagnostics, and security tools including Snyk. The section title and each command description can have a Spanish translation in the same file. See the [catalog authoring guide](data/README.md).
 
 ## Notes
 

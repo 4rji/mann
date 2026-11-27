@@ -1,7 +1,9 @@
+<!-- es: Eliminación de rutas IP -->
 # IP Route Deletion
 
 Remove default routes from the kernel routing table. Useful when forcing traffic through a specific gateway or VPN.
 
+<!-- es: Eliminar la ruta predeterminada -->
 ## Delete default route
 `sudo ip route del default via IP dev INTERFACE`
 

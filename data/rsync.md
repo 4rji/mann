@@ -1,18 +1,22 @@
+<!-- es: Uso de rsync -->
 # Rsync Usage
 
-Pull a remote home directory to the local cwd. Replace `USER` and `IP` with the real username and host.
+Copy a local file or directory named `a` to the remote home directory. Replace `USER` and `IP` with the real username and host.
 
-## Pull home (default ssh)
+<!-- es: Copiar al directorio personal remoto por SSH -->
+## Copy to remote home over SSH
 `rsync -avz --progress a USER@IP:~/`
 
 Default SSH on port 22.
 
-## Pull home (ssh port 2244)
+<!-- es: Copiar al directorio personal remoto por el puerto SSH 2244 -->
+## Copy to remote home over SSH port 2244
 `rsync -avz --progress -e "ssh -p 2244" a USER@IP:~/`
 
 Custom SSH port.
 
-## Pull home (ssh identity)
+<!-- es: Copiar al directorio personal remoto con una clave SSH -->
+## Copy to remote home with an SSH key
 `rsync -avz --progress -e "ssh -i ~/.ssh/id_ed25519" a USER@IP:~/`
 
 Use a specific SSH key.

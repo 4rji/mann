@@ -1,46 +1,38 @@
-# Cheat Catalog
+# Cheat catalog
 
-Each `.md` file in this directory is one section of the picker. Add a new file to create a new section; delete a file to remove it. The `mann` binary embeds this directory at build time, so you must re-build after editing.
+Each Markdown manual in this directory supplies one section of the picker. Write headings in English, the default language. Press **Shift+S** in the picker to see the Spanish headings or **Shift+E** to return to English.
 
-`README.md` (this file) is excluded by name and never shows up in the picker.
+## Bilingual entry
 
-## File format
+~~~~markdown
+<!-- es: Interfaces de red -->
+# Network interfaces
 
-A minimal section file looks like this:
+<!-- es: Mostrar información de una interfaz -->
+## Show interface details
 
-    # Section Title
+`ip link show dev INTERFACE`
 
-    Optional intro paragraph for the section. Free text — ignored by the parser.
+## Examples
 
-    ## Description of the command
-    `actual command goes here`
+```
+ip link show dev eth0
+```
+~~~~
 
-    Optional notes about the command. Also ignored by the parser.
+- Use one `#` heading for the section and a `##` heading for each command description.
+- Put each Spanish translation in a single-line `<!-- es: Texto -->` comment immediately above its heading. Spanish mode displays custom headings as written when they have no translation.
+- Put the command on the first nonblank line below its description. Wrap a single line in backticks or use a triple-backtick fence for a multiline command. Add explanatory notes after the command.
+- Use a single command for both languages. The picker copies the command exactly as the manual defines it.
 
-    ## Another command
-    `second command`
+## Preview examples
 
-    ## Examples
-    ```
-    actual command with real IP 192.168.1.1
-    second command with real interface wlan0
-    ```
+Use the uppercase placeholders `IP` and `INTERFACE` where appropriate. At the end of the file, add an optional `## Examples` heading and a fenced block with one example per line. Keep this heading in English. To attach an example to an entry, match the command text and replace the placeholders with concrete values. In the example above, the preview shows `eth0` and the copied command contains `INTERFACE`.
 
-## Rules
+## Add or update a manual
 
-- The first `# Heading` becomes the **section name** shown in the picker.
-- Each `## Heading` is one entry; the **first non-blank, non-heading line below it** is the command.
-- Wrap the command in single backticks. Triple-backtick code fences are accepted for multi-line commands.
-- Anything not on the command line is documentation and is ignored by the picker.
-- File name doesn't matter for ordering — the picker sorts by section name then by description.
+1. Add or edit a file under `data/` with a lowercase, hyphenated name such as `network-interfaces.md`. The picker skips `README.md`.
+2. From the repository root, run `go build -o mann .` to embed the edited catalog.
+3. Run `./mann`, search for the entry, and press `Shift+S` and `Shift+E` to check both headings.
 
-## Examples convention
-
-- Use placeholders `IP` and `INTERFACE` (uppercase) inside command lines whenever a real IP or interface name would normally appear. This keeps the copyable command generic.
-- Add a single `## Examples` entry per file at the bottom showing the same commands with realistic IP and interface values inside a triple-backtick fence. This serves as quick reference for how to run them in practice.
-
-## Adding a new section
-
-1. Drop a new `whatever.md` into this folder.
-2. Re-build: `go build -o mann .` from the parent directory.
-3. Run `./mann` and the new entries appear automatically.
+`mann -u` downloads published manuals into the user's catalog directory. A downloaded manual overrides the embedded file with the same name. For older downloads without translations, the picker can recover a bilingual heading when both the command and its English or Spanish heading match the embedded entry. To check a local build against its embedded manuals, point `MANN_DATA_DIR` at an empty directory. See the [update instructions](../README.md#updating-the-catalog--u).

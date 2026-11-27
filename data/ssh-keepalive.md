@@ -1,7 +1,9 @@
+<!-- es: Mantenimiento de conexiones SSH -->
 # SSH Connection Keep-Alive
 
 Prevent SSH sessions from being killed by NAT timeouts or idle disconnects. Replace `USER` and `IP` with the real username and host.
 
+<!-- es: Configurar los mensajes de actividad de SSH -->
 ## Keepalive flags
 `ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=3 USER@IP`
 

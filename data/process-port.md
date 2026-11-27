@@ -1,12 +1,15 @@
+<!-- es: Procesos y puertos -->
 # Process and Port Investigation
 
 Find which processes own which ports / working directories.
 
+<!-- es: Buscar procesos por puerto con lsof -->
 ## lsof by port
 `lsof -i:puerto`
 
 List processes attached to the given TCP/UDP port.
 
+<!-- es: Consultar el directorio de trabajo por PID con pwdx -->
 ## pwdx by PID
 `pwdx PID`
 

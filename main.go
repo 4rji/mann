@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -22,10 +21,12 @@ import (
 var dataFS embed.FS
 
 type Item struct {
-	Section     string
-	Description string
-	Command     string
-	Example     string
+	Section       string
+	Description   string
+	SectionES     string
+	DescriptionES string
+	Command       string
+	Example       string
 }
 
 var placeholderRe = regexp.MustCompile(`\b(IP|INTERFACE)\b`)
@@ -156,6 +157,10 @@ Usage:
                   %s (per-user, no sudo)
   mann -h         show this help
 
+Picker keys:
+  Shift+E  English (default)     Shift+S  Spanish
+  Enter    copy command          Tab      toggle preview     Esc  quit
+
 Override the catalog location:
   MANN_DATA_DIR=/some/dir mann -u
 
@@ -176,11 +181,11 @@ func have(bin string) bool {
 //	## Description          (becomes Item.Description)
 //	`command goes here`     (first non-blank, non-heading line below the ## )
 //
-// Anything else is documentation and is ignored.
+// An optional Spanish translation comment immediately precedes its heading.
 func parseFile(content string) []Item {
 	var items []Item
 	var examples []string
-	var section string
+	var section, sectionES string
 	lines := strings.Split(content, "\n")
 	for i := 0; i < len(lines); i++ {
 		t := strings.TrimSpace(lines[i])
@@ -195,15 +200,34 @@ func parseFile(content string) []Item {
 			}
 			cmd, advance := readCommand(lines, i+1)
 			if cmd != "" && section != "" {
-				items = append(items, Item{Section: section, Description: desc, Command: cmd})
+				items = append(items, Item{
+					Section: section, SectionES: sectionES, Description: desc,
+					DescriptionES: spanishHeading(lines, i), Command: cmd,
+				})
 			}
 			i = advance
 		case strings.HasPrefix(t, "# ") && !strings.HasPrefix(t, "## "):
 			section = strings.TrimSpace(t[2:])
+			sectionES = spanishHeading(lines, i)
 		}
 	}
 	attachExamples(items, examples)
 	return items
+}
+
+func spanishHeading(lines []string, heading int) string {
+	if heading == 0 {
+		return ""
+	}
+	value, ok := strings.CutPrefix(strings.TrimSpace(lines[heading-1]), "<!-- es:")
+	if !ok {
+		return ""
+	}
+	value, ok = strings.CutSuffix(value, "-->")
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(value)
 }
 
 // readFence reads a triple-backtick fenced block starting after a heading.
@@ -270,7 +294,7 @@ func readCommand(lines []string, start int) (string, int) {
 		if nt == "" {
 			continue
 		}
-		if strings.HasPrefix(nt, "#") {
+		if strings.HasPrefix(nt, "#") || strings.HasPrefix(nt, "<!-- es:") {
 			return "", j - 1
 		}
 		if strings.HasPrefix(nt, "```") {
@@ -287,10 +311,43 @@ func readCommand(lines []string, start int) (string, int) {
 	return "", len(lines)
 }
 
+func inheritTranslations(items, embedded []Item) {
+	for i := range items {
+		it := &items[i]
+		for _, base := range embedded {
+			if it.Command != base.Command {
+				continue
+			}
+			it.Section, it.SectionES = inheritHeading(it.Section, it.SectionES, base.Section, base.SectionES)
+			it.Description, it.DescriptionES = inheritHeading(it.Description, it.DescriptionES, base.Description, base.DescriptionES)
+		}
+	}
+}
+
+// Older downloads may contain either language as the only heading.
+func inheritHeading(title, translation, english, spanish string) (string, string) {
+	if translation == "" && spanish != "" {
+		switch {
+		case strings.EqualFold(title, english):
+			return title, spanish
+		case strings.EqualFold(title, spanish):
+			return english, spanish
+		}
+	}
+	return title, translation
+}
+
+func sortItems(items []Item) {
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Section != items[j].Section {
+			return items[i].Section < items[j].Section
+		}
+		return items[i].Description < items[j].Description
+	})
+}
+
 func loadItems() ([]Item, error) {
-	// filename -> markdown content. Embedded catalog first; updated manuals
-	// downloaded via `mann -u` overlay it and win by filename.
-	files := map[string]string{}
+	files := map[string][]Item{}
 
 	entries, err := dataFS.ReadDir("data")
 	if err != nil {
@@ -307,7 +364,7 @@ func loadItems() ([]Item, error) {
 		if err != nil {
 			return nil, err
 		}
-		files[e.Name()] = string(b)
+		files[e.Name()] = parseFile(string(b))
 	}
 
 	if dir := dataDir(); dir != "" {
@@ -323,7 +380,9 @@ func loadItems() ([]Item, error) {
 				if err != nil {
 					continue
 				}
-				files[e.Name()] = string(b)
+				items := parseFile(string(b))
+				inheritTranslations(items, files[e.Name()])
+				files[e.Name()] = items
 			}
 		}
 	}
@@ -336,14 +395,9 @@ func loadItems() ([]Item, error) {
 
 	var all []Item
 	for _, n := range names {
-		all = append(all, parseFile(files[n])...)
+		all = append(all, files[n]...)
 	}
-	sort.SliceStable(all, func(i, j int) bool {
-		if all[i].Section != all[j].Section {
-			return all[i].Section < all[j].Section
-		}
-		return all[i].Description < all[j].Description
-	})
+	sortItems(all)
 	return all, nil
 }
 
@@ -413,68 +467,6 @@ func clipInstallHint() string {
 	}, "\n")
 }
 
-func runFzf(items []Item) (Item, bool) {
-	var in bytes.Buffer
-	for _, it := range items {
-		display := fmt.Sprintf("%s%s%s %s│%s %s%s%s",
-			cCyan, it.Section, cReset,
-			cGray, cReset,
-			cYellow, it.Description, cReset)
-		fmt.Fprintf(&in, "%s\t%s\t%s\t%s\t%s\n",
-			it.Section, it.Description, it.Command, display, it.Example)
-	}
-
-	preview := strings.Join([]string{
-		`printf '`,
-		`\033[38;5;132mSection\033[0m\n  %s\n\n`,
-		`\033[38;5;143mDescription\033[0m\n  %s\n\n`,
-		`\033[38;5;108mCommand\033[0m\n  \033[38;5;67m%s\033[0m\n`,
-		`' {1} {2} {3}; `,
-		`[ -n {5} ] && printf '`,
-		`\n\033[38;5;143mExample\033[0m\n  \033[38;5;245m%s\033[0m\n`,
-		`' {5}; :`,
-	}, "")
-
-	cmd := exec.Command("fzf",
-		"--ansi",
-		"--exact",
-		"--delimiter=\t",
-		"--with-nth=4",
-		"--prompt=Comando> ",
-		"--height=80%",
-		"--layout=reverse",
-		"--border",
-		"--info=inline",
-		"--color=fg:#b8bec8,fg+:#d0d6de,bg:-1,bg+:#262a30,hl:#8fb0d0,hl+:#a9bed6,prompt:#8fb0d0,pointer:#d0879a,marker:#8fbf9f,header:#9aa6b2,border:#555b63,spinner:#8fb0d0,info:#9aa6b2",
-		"--preview", preview,
-		"--preview-window=right:55%:wrap:border-left",
-		"--header=ENTER select • ESC quit • TAB toggle preview",
-		"--bind=tab:toggle-preview",
-	)
-	cmd.Stdin = &in
-	cmd.Stderr = os.Stderr
-
-	out, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 130 {
-			return Item{}, false
-		}
-		fmt.Fprintln(os.Stderr, "fzf error:", err)
-		os.Exit(1)
-	}
-
-	line := strings.TrimRight(string(out), "\n")
-	if line == "" {
-		return Item{}, false
-	}
-	parts := strings.SplitN(line, "\t", 5)
-	if len(parts) < 3 {
-		fmt.Fprintln(os.Stderr, "unexpected fzf output:", line)
-		os.Exit(1)
-	}
-	return Item{Section: parts[0], Description: parts[1], Command: parts[2]}, true
-}
-
 func fallbackList(items []Item) {
 	fmt.Println("Install fzf for interactive filtering. Listing all entries:")
 	fmt.Println()
@@ -516,26 +508,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	picked, ok := runFzf(items)
-	if !ok {
-		os.Exit(0)
+	if err := pickCommand(items); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-
-	fmt.Printf("\n%sCommand%s\n  %s%s%s\n",
-		cGreen, cReset, cCyan, picked.Command, cReset)
-
-	backend, err := copyToClipboard(picked.Command)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "\n%sclipboard%s %s%s%s\n",
-			cMag, cReset, cYellow, err, cReset)
-		if hint := clipInstallHint(); hint != "" {
-			fmt.Fprintln(os.Stderr, hint)
-		}
-		return
-	}
-	fmt.Printf("%sCopied%s via %s%s%s  %s(%s)%s\n",
-		cGreen, cReset,
-		cBlue, backend, cReset,
-		cGray, runtime.GOOS, cReset,
-	)
 }

@@ -1,71 +1,85 @@
-# QMD Commands
+<!-- es: Comandos de QMD -->
+# QMD commands
 
-Quick Markdown Search — indexa carpetas de `.md` y busca sobre ellas (BM25 + vectorial). Reemplaza `PATH`, `NAME` y `QUERY` según corresponda.
+Quick Markdown Search indexes directories of Markdown files for keyword (BM25) and vector searches. Replace `PATH`, `NAME` and `QUERY` with your own values.
 
-## Agregar colección
+<!-- es: Agregar colección -->
+## Add a collection
 `qmd collection add PATH`
 
-Indexa una carpeta nueva como colección buscable.
+Index a directory as a searchable collection.
 
-## Listar colecciones
+<!-- es: Listar colecciones -->
+## List collections
 `qmd collection list`
 
-Muestra todas las colecciones indexadas.
+Show all indexed collections.
 
-## Mostrar colección
+<!-- es: Mostrar colección -->
+## Show collection details
 `qmd collection show NAME`
 
-Detalle de una colección: ruta, cantidad de docs, estado.
+Show a collection’s path, document count and status.
 
-## Renombrar colección
+<!-- es: Renombrar colección -->
+## Rename a collection
 `qmd collection rename NAME NEW_NAME`
 
-Cambia el nombre de una colección existente.
+Change the name of an existing collection.
 
-## Quitar colección
+<!-- es: Quitar colección -->
+## Remove a collection
 `qmd collection remove NAME`
 
-Elimina una colección del índice (no borra los archivos en disco).
+Remove the collection from the index. Its files stay on disk.
 
-## Actualizar índice
+<!-- es: Actualizar índice -->
+## Update the index
 `qmd update`
 
-Reindexa las colecciones (usa `--pull` para hacer `git pull` antes).
+Reindex the collections. Use `--pull` to run `git pull` first.
 
-## Ver estado del índice
+<!-- es: Ver estado del índice -->
+## Check index status
 `qmd status`
 
-Salud del índice y de cada colección.
+Check the health of the index and each collection.
 
-## Listar archivos indexados
+<!-- es: Listar archivos indexados -->
+## List indexed files
 `qmd ls NAME`
 
-Inspecciona qué archivos quedaron indexados dentro de una colección.
+See which files QMD has indexed in a collection.
 
-## Buscar (híbrido)
+<!-- es: Buscar (híbrido) -->
+## Run a hybrid search
 `qmd query "QUERY"`
 
-Búsqueda híbrida con expansión y rerank — la recomendada para uso normal.
+Search with query expansion and reranking. Use this for general searches.
 
-## Buscar por palabras clave
+<!-- es: Buscar por palabras clave -->
+## Search by keyword
 `qmd search "QUERY"`
 
-Búsqueda full-text BM25, sin LLM, más rápida.
+Run a fast BM25 full-text search without an LLM.
 
-## Ver un documento
+<!-- es: Ver un documento -->
+## View a document
 `qmd get PATH`
 
-Muestra el documento con números de línea.
+Display a document with line numbers.
 
-## Generar embeddings
+<!-- es: Generar embeddings -->
+## Generate embeddings
 `qmd embed`
 
-Genera/refresca los embeddings vectoriales (usa `-f` para forzar, `-c NAME` para limitar a una colección).
+Generate or refresh vector embeddings. Use `-f` to force a refresh or `-c NAME` to limit it to one collection.
 
-## Levantar servidor MCP
+<!-- es: Levantar servidor MCP -->
+## Start the MCP server
 `qmd mcp --http --daemon`
 
-Arranca el servidor QMD vía HTTP en background (modo daemon) para que agentes/IDEs se conecten.
+Run the QMD server in the background so agents and IDEs can connect over HTTP.
 
 ## Examples
 ```

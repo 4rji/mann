@@ -1,3 +1,4 @@
+<!-- es: Herramientas MCP de Snyk -->
 # Snyk MCP Tools
 
 Tools exposed by the Snyk MCP Server. These are **not** shell commands: they are tool names an
@@ -12,12 +13,14 @@ scan: `snyk_trust` the folder, then `snyk_auth`.
 
 Typical flow: trust -> auth -> scan -> fix -> re-scan.
 
+<!-- es: Iniciar el servidor MCP de Snyk por stdio desde la configuración del cliente -->
 ## Start the Snyk MCP server over stdio (shell command, goes in the client config)
 `snyk mcp -t stdio`
 
 The one real CLI command here. Put it as the `command` of an MCP server entry in your client
 config. Use `-t sse` instead if the client wants an HTTP/SSE transport.
 
+<!-- es: Marcar una carpeta como de confianza para que Snyk pueda analizarla -->
 ## Trust a folder so Snyk may scan it
 `snyk_trust`
 
@@ -25,18 +28,21 @@ Run this first on any new repo. Snyk refuses to scan untrusted paths, so a scan 
 "path not trusted" means you skipped this. Give it the absolute path of the project root, not
 a subfolder.
 
+<!-- es: Autenticarse en Snyk -->
 ## Authenticate with Snyk
 `snyk_auth`
 
 Opens a browser to log in, or uses an API token if one is configured. Needed once per machine;
 the token is cached locally. Every scan tool fails with an auth error until this succeeds.
 
+<!-- es: Cerrar la sesión y borrar el token guardado -->
 ## Log out and clear the stored token
 `snyk_logout`
 
 Deletes the locally stored auth token. Use it to switch accounts or before handing over a
 shared machine. Re-run `snyk_auth` afterwards.
 
+<!-- es: Analizar el código fuente con SAST sin ejecutarlo -->
 ## SAST scan of source code (no execution)
 `snyk_code_scan`
 
@@ -46,6 +52,7 @@ just what you touched. Fast, so it is the one to re-run after applying a fix. Co
 C/C++, Dart/Flutter, Elixir, Go, Groovy, Java/Kotlin, JavaScript, .NET, PHP, Python, Ruby,
 Rust, Scala, Swift/Objective-C, TypeScript, VB.NET.
 
+<!-- es: Analizar los manifiestos de dependencias con SCA -->
 ## SCA scan of dependency manifests
 `snyk_sca_scan`
 
@@ -55,6 +62,7 @@ vulnerable package, the path that pulls it in, and the version that fixes it —
 to bump those versions and re-run. A monorepo needs the all-projects behavior to catch
 manifests in subfolders; a lockfile present means much more precise results.
 
+<!-- es: Analizar una imagen de contenedor -->
 ## Scan a container image
 `snyk_container_scan`
 
@@ -64,6 +72,7 @@ the base-image upgrade suggestion — usually one FROM line fixes most findings.
 Dockerfile path too when you have it, so it can point at the offending instruction. The image
 must exist locally or be pullable with your current docker credentials.
 
+<!-- es: Detectar errores de configuración en infraestructura como código -->
 ## Scan Infrastructure as Code for misconfigurations
 `snyk_iac_scan`
 
@@ -73,6 +82,7 @@ Reads Terraform (.tf and plan JSON), Kubernetes YAML/JSON, AWS CloudFormation, A
 Manager JSON, and Serverless Framework. Each finding names the file, the resource, and the
 line to change.
 
+<!-- es: Buscar vulnerabilidades conocidas en una SBOM existente (experimental) -->
 ## Scan an existing SBOM for known vulnerabilities (experimental)
 `snyk_sbom_scan`
 
@@ -81,6 +91,7 @@ handoff. Give it the path to a CycloneDX or SPDX document. Every component must 
 PackageURL (purl); components without one are silently skipped, so an empty result usually
 means a purl-less SBOM, not a clean one.
 
+<!-- es: Generar una AI-BOM de Python en JSON CycloneDX v1.6 (experimental) -->
 ## Generate AI-BOM for a Python project (CycloneDX v1.6 JSON, experimental)
 `snyk_aibom`
 
@@ -89,12 +100,14 @@ components, emitted as CycloneDX v1.6 JSON. Run it from inside the Python projec
 internet, the feature enabled on your account, and the preview-channel CLI — on a stable CLI
 it just errors out.
 
+<!-- es: Enviar comentarios a Snyk -->
 ## Send feedback to Snyk
 `snyk_send_feedback`
 
 Sends a free-text message to Snyk from inside the session. For false positives or missing
 coverage. Do not paste code or secrets into it.
 
+<!-- es: Mostrar la versión instalada del servidor MCP de Snyk -->
 ## Show the installed Snyk MCP Server version
 `snyk_version`
 
