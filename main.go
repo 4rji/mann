@@ -160,7 +160,8 @@ Uso:
 
 Atajos:
   Shift+S  Español (predeterminado)     Shift+E  English
-  F1       Cian (predeterminado)        F2       Magenta     F3  Ámbar
+  Ctrl+T   Cambiar de tema (magenta al iniciar)
+  F1/F2/F3 Cian/Magenta/Ámbar
   Enter    Copiar el comando            Tab      Mostrar u ocultar la vista previa
   Esc      Salir
 

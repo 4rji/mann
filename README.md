@@ -52,12 +52,13 @@ The catalog under `data/` is embedded at compile time, so you must re-build afte
 | `↑` / `↓` | Move through matches. |
 | `Shift+E` | Show the picker and catalog headings in English. |
 | `Shift+S` | Return to Spanish. |
-| `F1` / `F2` / `F3` | Switch to Cyan, Magenta, or Amber. |
+| `Ctrl+T` | Cycle through Cyan, Magenta, and Amber. |
+| `F1` / `F2` / `F3` | Select Cyan, Magenta, or Amber directly when the terminal sends function keys. |
 | `Tab` | Show or hide the command preview. |
 | `Enter` | Print the selected command and copy it to the clipboard. |
 | `Esc` / `Ctrl+C` | Quit the picker. |
 
-The bottom border shows the language and color shortcuts. Each session starts with Cyan. Changing the palette keeps the current language and search text. Switching languages keeps the palette and search text. Matches can change when the action captions change language.
+The bottom border shows the language shortcuts, the active theme, and `Ctrl+T` to change it. Each session starts with Magenta. Changing the palette keeps the current language and search text. Switching languages keeps the palette and search text. Matches can change when the action captions change language.
 
 The full-width list has a fixed-width action column, so commands line up beside their captions. The command column shows the first line of the invocation. The preview below gives the section title, full description, complete command, and a distinct example when available. After selection, the terminal shows which clipboard tool handled the copy. Paste the command into your notes or terminal and fill in any placeholders before use.
 

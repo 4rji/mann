@@ -13,14 +13,15 @@ import (
 )
 
 type pickerText struct {
-	prompt, controls, action, command, example, copied, clipboardUnavailable string
-	spanishCaptions                                                          bool
+	prompt, controls, themeLabel, action, command, example, copied, clipboardUnavailable string
+	spanishCaptions                                                                      bool
 }
 
 const (
-	slate      = "\x1b[38;2;157;170;196m"
-	englishKey = "Shift+E English"
-	spanishKey = "Shift+S Español"
+	slate        = "\x1b[38;2;157;170;196m"
+	englishKey   = "Shift+E English"
+	spanishKey   = "Shift+S Español"
+	nextThemeKey = "ctrl-t"
 )
 
 type pickerTheme struct {
@@ -28,10 +29,11 @@ type pickerTheme struct {
 	bg, previewBG, accent, secondary, border uint32
 }
 
+// The picker starts with the first theme and cycles through the rest in order.
 var pickerThemes = [...]pickerTheme{
-	{key: "f1", nameEN: "Cyan", nameES: "Cian", bg: 0x10141c, previewBG: 0x18212d, accent: 0x7bddcf, secondary: 0xf497bf, border: 0x536579},
 	{key: "f2", nameEN: "Magenta", nameES: "Magenta", bg: 0x1a1320, previewBG: 0x261b2f, accent: 0xf3a1dc, secondary: 0xc9aeff, border: 0x75597e},
 	{key: "f3", nameEN: "Amber", nameES: "Ámbar", bg: 0x191611, previewBG: 0x272016, accent: 0xf3c475, secondary: 0x9ad4bb, border: 0x786948},
+	{key: "f1", nameEN: "Cyan", nameES: "Cian", bg: 0x10141c, previewBG: 0x18212d, accent: 0x7bddcf, secondary: 0xf497bf, border: 0x536579},
 }
 
 func foreground(rgb uint32) string {
@@ -51,9 +53,10 @@ func keyHint(key, action string) string {
 }
 
 var english = pickerText{
-	prompt:   "Search  › ",
-	controls: keyHint("Enter", "Copy") + "   " + keyHint("Tab", "Preview") + "   " + keyHint("Esc", "Quit"),
-	action:   "Action", command: "Command", example: "Example", copied: "Copied via",
+	prompt:     "Search  › ",
+	controls:   keyHint("Enter", "Copy") + "   " + keyHint("Tab", "Preview") + "   " + keyHint("Esc", "Quit"),
+	themeLabel: "Theme",
+	action:     "Action", command: "Command", example: "Example", copied: "Copied via",
 	clipboardUnavailable: "Could not copy the command to the clipboard.",
 }
 
@@ -61,6 +64,7 @@ var spanish = pickerText{
 	spanishCaptions: true,
 	prompt:          "Buscar  › ",
 	controls:        keyHint("Enter", "Copiar") + "   " + keyHint("Tab", "Vista previa") + "   " + keyHint("Esc", "Salir"),
+	themeLabel:      "Tema",
 	action:          "Acción", command: "Comando", example: "Ejemplo", copied: "Copiado con",
 	clipboardUnavailable: "No se pudo copiar el comando al portapapeles.",
 }
@@ -68,23 +72,12 @@ var spanish = pickerText{
 func (ui pickerText) footer(active pickerTheme) string {
 	accent := foreground(active.accent)
 	languages := accent + englishKey + cReset + " / " + spanishKey
+	name := active.nameEN
 	if ui.spanishCaptions {
 		languages = englishKey + " / " + accent + spanishKey + cReset
+		name = active.nameES
 	}
-
-	shortcuts := make([]string, 0, len(pickerThemes))
-	for _, theme := range pickerThemes {
-		name := theme.nameEN
-		if ui.spanishCaptions {
-			name = theme.nameES
-		}
-		label := strings.ToUpper(theme.key) + " " + name
-		if theme.key == active.key {
-			label = accent + "\x1b[1m" + label + cReset
-		}
-		shortcuts = append(shortcuts, label)
-	}
-	return " " + languages + "  │  " + strings.Join(shortcuts, "  ") + " "
+	return " " + languages + "  │  Ctrl+T " + ui.themeLabel + " · " + accent + "\x1b[1m" + name + cReset + " "
 }
 
 func spanishItems(items []Item) []Item {
@@ -160,7 +153,7 @@ func runPicker(items []Item, ui pickerText, theme pickerTheme, query string) ([]
 	// fzf shell-quotes each placeholder. Only fixed UI labels enter the format string.
 	preview := fmt.Sprintf(`printf '%s%%s%s  ·  %%s\n%s%s%s  %%s\n' {2} {3} {4}; test -z {5} || printf '%s%s%s  %%s\n' {5}`,
 		slate, cReset, accent, strings.ToUpper(ui.command), cReset, foreground(theme.secondary), strings.ToUpper(ui.example), cReset)
-	keys := []string{"E", "S"}
+	keys := []string{"E", "S", nextThemeKey}
 	for _, option := range pickerThemes {
 		keys = append(keys, option.key)
 	}
@@ -195,11 +188,11 @@ func runPicker(items []Item, ui pickerText, theme pickerTheme, query string) ([]
 func pickCommand(items []Item) error {
 	localized := spanishItems(items)
 	entries, ui := localized, spanish
-	theme := pickerThemes[0]
+	themeIndex := 0
 	query := ""
 picker:
 	for {
-		result, err := runPicker(entries, ui, theme, query)
+		result, err := runPicker(entries, ui, pickerThemes[themeIndex], query)
 		if err != nil || len(result) < 2 {
 			return err
 		}
@@ -209,10 +202,12 @@ picker:
 			entries, ui = localized, spanish
 		case "E":
 			entries, ui = items, english
+		case nextThemeKey:
+			themeIndex = (themeIndex + 1) % len(pickerThemes)
 		default:
-			for _, option := range pickerThemes {
+			for i, option := range pickerThemes {
 				if result[1] == option.key {
-					theme = option
+					themeIndex = i
 					continue picker
 				}
 			}
